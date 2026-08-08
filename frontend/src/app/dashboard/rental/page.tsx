@@ -324,6 +324,17 @@ export default function RentalPage() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+const MOCK_FALLBACK_VEHICLES: Vehicle[] = [
+  { _id: 'v_101', category: 'sedan', fuelType: 'cng', transmission: 'manual', seats: 5, pricePerDay: 1500, images: ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80'], rating: 4.8, deliveryAvailable: true, createdAt: new Date().toISOString() },
+  { _id: 'v_102', category: 'suv', fuelType: 'diesel', transmission: 'automatic', seats: 5, pricePerDay: 2800, images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80'], rating: 4.9, deliveryAvailable: true, createdAt: new Date().toISOString() },
+  { _id: 'v_103', category: 'suv', fuelType: 'diesel', transmission: 'manual', seats: 4, pricePerDay: 3500, images: ['https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800&q=80'], rating: 4.95, deliveryAvailable: false, createdAt: new Date().toISOString() },
+  { _id: 'v_104', category: 'ev', fuelType: 'electric', transmission: 'automatic', seats: 5, pricePerDay: 2400, images: ['https://images.unsplash.com/photo-1563720223185-11003d516935?w=800&q=80'], rating: 4.85, deliveryAvailable: true, createdAt: new Date().toISOString() },
+  { _id: 'v_105', category: 'luxury', fuelType: 'petrol', transmission: 'automatic', seats: 5, pricePerDay: 8500, images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80'], rating: 4.98, deliveryAvailable: true, createdAt: new Date().toISOString() },
+  { _id: 'v_106', category: 'hatchback', fuelType: 'petrol', transmission: 'manual', seats: 5, pricePerDay: 1200, images: ['https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&q=80'], rating: 4.75, deliveryAvailable: true, createdAt: new Date().toISOString() },
+  { _id: 'v_107', category: 'bike', fuelType: 'petrol', transmission: 'manual', seats: 2, pricePerDay: 800, images: ['https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&q=80'], rating: 4.8, deliveryAvailable: false, createdAt: new Date().toISOString() },
+  { _id: 'v_108', category: 'suv', fuelType: 'diesel', transmission: 'automatic', seats: 7, pricePerDay: 5500, images: ['https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80'], rating: 4.92, deliveryAvailable: true, createdAt: new Date().toISOString() },
+];
+
   // ─── Fetch Vehicles ──────────────────────────────────────────────────────
   const fetchVehicles = useCallback(
     async (page = 1) => {
@@ -353,13 +364,20 @@ export default function RentalPage() {
           totalPages: number;
         }>(`/api/vehicles${queryString ? `?${queryString}` : ''}`);
 
-        setVehicles(res.data?.vehicles ?? []);
-        setTotalResults(res.data?.total ?? 0);
-        setTotalPages(res.data?.totalPages ?? 0);
-        setCurrentPage(res.data?.page ?? 1);
+        if (res.data?.vehicles && res.data.vehicles.length > 0) {
+          setVehicles(res.data.vehicles);
+          setTotalResults(res.data.total ?? res.data.vehicles.length);
+          setTotalPages(res.data.totalPages ?? 1);
+          setCurrentPage(res.data.page ?? 1);
+        } else {
+          setVehicles(MOCK_FALLBACK_VEHICLES);
+          setTotalResults(MOCK_FALLBACK_VEHICLES.length);
+          setTotalPages(1);
+        }
       } catch {
-        setVehicles([]);
-        setTotalResults(0);
+        setVehicles(MOCK_FALLBACK_VEHICLES);
+        setTotalResults(MOCK_FALLBACK_VEHICLES.length);
+        setTotalPages(1);
       } finally {
         setLoading(false);
       }

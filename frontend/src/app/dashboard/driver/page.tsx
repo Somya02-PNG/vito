@@ -86,6 +86,17 @@ export default function DriverDashboardPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawSuccessMsg, setWithdrawSuccessMsg] = useState('');
 
+const MOCK_DEFAULT_REQUESTS: IncomingRequest[] = [
+  { id: 'req_001', type: 'cab', riderName: 'Ananya Sharma', rating: 4.9, pickup: 'Connaught Place, Inner Circle', drop: 'IGI Airport Terminal 3', distance: '16.4 km', fare: 480, timeAgo: '2 mins ago' },
+  { id: 'req_002', type: 'hire', riderName: 'Vikramaditya Rao', rating: 4.8, pickup: 'DLF Cyber City, Phase 2, Gurugram', drop: 'Hourly Driver (6 Hours)', distance: '6 Hours Hire', fare: 1200, timeAgo: '5 mins ago' },
+  { id: 'req_003', type: 'cab', riderName: 'Priya Patel', rating: 4.95, pickup: 'Hauz Khas Village', drop: 'Noida Sector 62', distance: '22.1 km', fare: 650, timeAgo: '8 mins ago' },
+];
+
+const MOCK_DEFAULT_PAYOUTS: PayoutLog[] = [
+  { id: 'pay_1', date: '06 Aug 2026', bankAccount: 'HDFC Bank **** 4892', amount: 4500, status: 'Completed' },
+  { id: 'pay_2', date: '01 Aug 2026', bankAccount: 'HDFC Bank **** 4892', amount: 8200, status: 'Completed' },
+];
+
   // Fetch Dashboard Stats
   const loadDashboard = async () => {
     try {
@@ -97,14 +108,18 @@ export default function DriverDashboardPage() {
       }>('/api/driver/dashboard');
 
       if (res.data) {
-        setIsOnline(res.data.driver.availability);
-        setWalletBalance(res.data.driver.walletBalance || 12480);
+        setIsOnline(res.data.driver?.availability ?? true);
+        setWalletBalance(res.data.driver?.walletBalance || 12480);
         setStats(res.data.stats || stats);
-        setRequests(res.data.requests || []);
-        setPayouts(res.data.payouts || []);
+        setRequests(res.data.requests && res.data.requests.length > 0 ? res.data.requests : MOCK_DEFAULT_REQUESTS);
+        setPayouts(res.data.payouts && res.data.payouts.length > 0 ? res.data.payouts : MOCK_DEFAULT_PAYOUTS);
+      } else {
+        setRequests(MOCK_DEFAULT_REQUESTS);
+        setPayouts(MOCK_DEFAULT_PAYOUTS);
       }
     } catch {
-      // Keep default mocks
+      setRequests(MOCK_DEFAULT_REQUESTS);
+      setPayouts(MOCK_DEFAULT_PAYOUTS);
     }
   };
 

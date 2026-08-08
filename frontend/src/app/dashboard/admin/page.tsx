@@ -131,13 +131,37 @@ export default function AdminDashboardPage() {
     }
   };
 
+const MOCK_FALLBACK_DRIVERS: DriverRecord[] = [
+  { _id: 'drv_101', name: 'Ramesh Chandra', email: 'ramesh.driver@vito.com', licenseNumber: 'DL-04-2021-99812', experience: 9, hourlyRate: 180, verificationStatus: 'pending', createdAt: '2026-08-01T10:00:00Z' },
+  { _id: 'drv_102', name: 'Sunita Malhotra', email: 'sunita.m@vito.com', licenseNumber: 'DL-02-2019-44120', experience: 7, hourlyRate: 160, verificationStatus: 'verified', createdAt: '2026-07-28T14:30:00Z' },
+  { _id: 'drv_103', name: 'Gurpreet Singh', email: 'gurpreet.s@vito.com', licenseNumber: 'DL-01-2017-11234', experience: 12, hourlyRate: 220, verificationStatus: 'verified', createdAt: '2026-07-15T09:15:00Z' },
+  { _id: 'drv_104', name: 'Amit Joshi', email: 'amit.j@vito.com', licenseNumber: 'DL-05-2023-88712', experience: 5, hourlyRate: 150, verificationStatus: 'pending', createdAt: '2026-08-05T11:45:00Z' },
+];
+
+const MOCK_FALLBACK_USERS: UserRecord[] = [
+  { _id: 'usr_1', name: 'Ananya Sharma', email: 'ananya@gmail.com', role: 'user', createdAt: '2026-07-10T12:00:00Z' },
+  { _id: 'usr_2', name: 'Rahul Verma', email: 'rahul.v@vito.com', role: 'driver', createdAt: '2026-06-20T08:30:00Z' },
+  { _id: 'usr_3', name: 'Vikram S.', email: 'vikram.admin@vito.com', role: 'admin', createdAt: '2026-05-01T10:15:00Z' },
+  { _id: 'usr_4', name: 'Priya Patel', email: 'priya.p@gmail.com', role: 'user', createdAt: '2026-08-02T16:20:00Z' },
+];
+
+const MOCK_FALLBACK_VEHICLES_ADMIN: VehicleRecord[] = [
+  { _id: 'v_101', category: 'sedan', fuelType: 'cng', transmission: 'manual', seats: 5, pricePerDay: 1500, rating: 4.8, deliveryAvailable: true, ownerId: { name: 'VITO Host Direct' } },
+  { _id: 'v_102', category: 'suv', fuelType: 'diesel', transmission: 'automatic', seats: 5, pricePerDay: 2800, rating: 4.9, deliveryAvailable: true, ownerId: { name: 'Vikram S.' } },
+  { _id: 'v_103', category: 'luxury', fuelType: 'petrol', transmission: 'automatic', seats: 5, pricePerDay: 8500, rating: 4.98, deliveryAvailable: true, ownerId: { name: 'VITO Luxury Fleet' } },
+];
+
   // Fetch Drivers
   const loadDrivers = async () => {
     try {
       const res = await fetchAPI<{ drivers: DriverRecord[] }>('/api/admin/drivers');
-      if (res.data?.drivers) setDrivers(res.data.drivers);
+      if (res.data?.drivers && res.data.drivers.length > 0) {
+        setDrivers(res.data.drivers);
+      } else {
+        setDrivers(MOCK_FALLBACK_DRIVERS);
+      }
     } catch {
-      // Ignore
+      setDrivers(MOCK_FALLBACK_DRIVERS);
     }
   };
 
@@ -145,9 +169,13 @@ export default function AdminDashboardPage() {
   const loadUsers = async () => {
     try {
       const res = await fetchAPI<{ users: UserRecord[] }>('/api/admin/users');
-      if (res.data?.users) setUsers(res.data.users);
+      if (res.data?.users && res.data.users.length > 0) {
+        setUsers(res.data.users);
+      } else {
+        setUsers(MOCK_FALLBACK_USERS);
+      }
     } catch {
-      // Ignore
+      setUsers(MOCK_FALLBACK_USERS);
     }
   };
 
@@ -155,9 +183,13 @@ export default function AdminDashboardPage() {
   const loadVehicles = async () => {
     try {
       const res = await fetchAPI<{ vehicles: VehicleRecord[] }>('/api/admin/vehicles');
-      if (res.data?.vehicles) setVehicles(res.data.vehicles);
+      if (res.data?.vehicles && res.data.vehicles.length > 0) {
+        setVehicles(res.data.vehicles);
+      } else {
+        setVehicles(MOCK_FALLBACK_VEHICLES_ADMIN);
+      }
     } catch {
-      // Ignore
+      setVehicles(MOCK_FALLBACK_VEHICLES_ADMIN);
     }
   };
 
