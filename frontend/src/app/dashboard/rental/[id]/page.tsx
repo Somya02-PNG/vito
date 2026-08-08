@@ -35,13 +35,12 @@ import {
 // ─── Lazy-load the map to prevent SSR issues ─────────────────────────────────
 const LocationMap = dynamic(() => import('./LocationMap'), { ssr: false });
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 interface VehicleOwner {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
-  createdAt: string;
+  _id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  createdAt?: string;
 }
 
 interface VehicleDetail {
@@ -52,12 +51,16 @@ interface VehicleDetail {
   seats: number;
   pricePerDay: number;
   images: string[];
-  location: { lat: number; lng: number };
-  ownerId: VehicleOwner;
+  location?: { lat: number; lng: number };
+  ownerId?: VehicleOwner;
   rating: number;
   deliveryAvailable: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  specs?: any;
+  pickupLocation?: any;
+  cancellationPolicy?: string;
+  reviews?: any[];
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
