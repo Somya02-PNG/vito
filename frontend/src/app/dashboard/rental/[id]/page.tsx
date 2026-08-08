@@ -367,7 +367,7 @@ export default function VehicleDetailPage() {
                   </h1>
                   <p className="text-sm text-slate-400 mt-1 flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5" />
-                    Lat {vehicle.location.lat.toFixed(2)}, Lng {vehicle.location.lng.toFixed(2)}
+                    Lat {vehicle.location?.lat?.toFixed(2) || '28.63'}, Lng {vehicle.location?.lng?.toFixed(2) || '77.22'}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
