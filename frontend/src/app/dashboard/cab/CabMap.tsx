@@ -65,7 +65,8 @@ export interface DriverMarker {
   fare: number;
   lat: number;
   lng: number;
-  type: string;
+  type?: string;
+  category?: string;
 }
 
 interface CabMapProps {
