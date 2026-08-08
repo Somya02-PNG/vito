@@ -557,7 +557,7 @@ export default function VehicleDetailPage() {
                 Pickup Location
               </h2>
               <div className="rounded-xl overflow-hidden border border-white/[0.06] h-64 sm:h-80">
-                <LocationMap lat={vehicle.location.lat} lng={vehicle.location.lng} />
+                <LocationMap lat={vehicle.location?.lat || 28.6315} lng={vehicle.location?.lng || 77.2167} />
               </div>
               <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1">
                 <Info className="w-3 h-3" />
