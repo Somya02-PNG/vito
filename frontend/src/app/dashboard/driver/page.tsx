@@ -39,12 +39,14 @@ interface DriverStats {
 
 interface IncomingRequest {
   id: string;
-  type: 'cab' | 'driver_hire';
+  type: 'cab' | 'driver_hire' | 'hire';
   riderName: string;
-  riderPhone: string;
+  riderPhone?: string;
+  rating?: number;
   pickup: string;
   drop: string;
   distanceKm?: number;
+  distance?: string;
   estMins?: number;
   hours?: number;
   fare: number;
