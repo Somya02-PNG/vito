@@ -214,7 +214,10 @@ const MOCK_DEFAULT_PAYOUTS: PayoutLog[] = [
 
       if (res.data) {
         setWalletBalance(res.data.walletBalance);
-        if (res.data.payout) setPayouts((prev) => [res.data.payout, ...prev]);
+        if (res.data.payout) {
+          const payoutItem = res.data.payout;
+          setPayouts((prev) => [payoutItem, ...prev]);
+        }
       }
       setWithdrawSuccessMsg(`Successfully withdrew ₹${amt.toLocaleString('en-IN')}`);
       setTimeout(() => {
