@@ -239,8 +239,9 @@ export default function PlannerPage() {
       });
 
       if (res.data?.trip) {
-        setTrips((prev) => [res.data.trip, ...prev]);
-        setSelectedTripId(res.data.trip._id);
+        const newTrip = res.data.trip;
+        setTrips((prev) => [newTrip, ...prev]);
+        setSelectedTripId(newTrip._id);
       }
       setShowNewTripModal(false);
       setNewTripTitle('');
