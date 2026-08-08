@@ -416,7 +416,7 @@ export default function VehicleDetailPage() {
                   { label: 'Price / Day', value: `₹${vehicle.pricePerDay.toLocaleString('en-IN')}` },
                   { label: 'Home Delivery', value: vehicle.deliveryAvailable ? 'Available' : 'Not Available' },
                   { label: 'Rating', value: vehicle.rating > 0 ? `${vehicle.rating.toFixed(1)} / 5.0` : 'No ratings yet' },
-                  { label: 'Listed On', value: new Date(vehicle.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) },
+                  { label: 'Listed On', value: new Date(vehicle.createdAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) },
                 ].map((spec) => (
                   <div key={spec.label} className="bg-[#0d1117] p-3.5">
                     <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{spec.label}</p>
