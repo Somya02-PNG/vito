@@ -452,7 +452,7 @@ export default function VehicleDetailPage() {
                       <div className="w-px h-3 bg-white/[0.08]" />
                       <div className="flex items-center gap-1 text-[11px] text-slate-400">
                         <Calendar className="w-3 h-3" />
-                        Member since {new Date(owner.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                        Member since {new Date(owner.createdAt || Date.now()).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                       </div>
                     </div>
                   </div>
