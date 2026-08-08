@@ -47,9 +47,11 @@ interface VehicleDetail {
   seats: number;
   pricePerDay: number;
   images: string[];
-  location: { lat: number; lng: number };
+  location?: { lat: number; lng: number };
   rating: number;
   deliveryAvailable: boolean;
+  ownerId?: { name?: string; email?: string };
+  createdAt?: string;
 }
 
 interface AddOn {
