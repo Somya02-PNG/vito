@@ -29,6 +29,7 @@ import {
   Check,
   ChevronDown,
   Info,
+  Key,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
