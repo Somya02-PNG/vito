@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
-export type VehicleCategory = 'sedan' | 'suv' | 'hatchback' | 'bike' | 'luxury' | 'van';
+export type VehicleCategory = 'sedan' | 'suv' | 'hatchback' | 'bike' | 'luxury' | 'van' | 'ev';
 export type FuelType = 'petrol' | 'diesel' | 'electric' | 'hybrid' | 'cng';
 export type TransmissionType = 'manual' | 'automatic';
 
@@ -30,7 +30,7 @@ const VehicleSchema = new Schema<IVehicle>(
       type: String,
       required: [true, 'Vehicle category is required'],
       enum: {
-        values: ['sedan', 'suv', 'hatchback', 'bike', 'luxury', 'van'],
+        values: ['sedan', 'suv', 'hatchback', 'bike', 'luxury', 'van', 'ev'],
         message: '{VALUE} is not a valid vehicle category',
       },
     },

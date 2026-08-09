@@ -86,7 +86,6 @@ const PaymentSchema = new Schema<IPayment>(
 // Indexes
 PaymentSchema.index({ payerId: 1 });
 PaymentSchema.index({ bookingId: 1 });
-PaymentSchema.index({ transactionRef: 1 });
 
 const Payment = mongoose.model<IPayment>('Payment', PaymentSchema);
 export default Payment;

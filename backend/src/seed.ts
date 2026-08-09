@@ -20,6 +20,7 @@ const runSeed = async () => {
       user = await User.create({
         name: 'VITO Master User',
         email: 'user@vito.com',
+        phone: '+919876543210',
         passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
         role: 'admin',
       });
@@ -30,7 +31,21 @@ const runSeed = async () => {
     const createdV = await Vehicle.insertMany(vehicles);
 
     await Driver.deleteMany({});
-    const drivers = SEED_DRIVERS.map((d) => ({ ...d, userId: user!._id }));
+    const drivers = [];
+    for (let i = 0; i < SEED_DRIVERS.length; i++) {
+      const dData = SEED_DRIVERS[i];
+      let driverUser = await User.findOne({ email: `driver${i + 1}@vito.com` });
+      if (!driverUser) {
+        driverUser = await User.create({
+          name: `Driver Partner ${i + 1}`,
+          email: `driver${i + 1}@vito.com`,
+          phone: `+91987654320${i}`,
+          passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
+          role: 'driver',
+        });
+      }
+      drivers.push({ ...dData, userId: driverUser._id });
+    }
     const createdD = await Driver.insertMany(drivers);
 
     console.log(`✅ Seeded ${createdV.length} vehicles and ${createdD.length} drivers successfully!`);

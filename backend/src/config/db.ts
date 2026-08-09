@@ -1,18 +1,22 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+// Fix for Windows DNS SRV lookup (querySrv ECONNREFUSED) with mongodb+srv://
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // Fallback to default DNS
+}
 
 export const connectDB = async (): Promise<boolean> => {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/vito_db';
 
   try {
-    // Attempt MongoDB connection (with short timeout so server starts even without active Mongo daemon)
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 2000,
-    });
-    console.log('✅ MongoDB connected successfully to:', uri);
+    await mongoose.connect(uri);
+    console.log('✅ MongoDB connected successfully');
     return true;
   } catch (error: any) {
-    console.warn('⚠️ MongoDB Connection Notice:', error.message || error);
-    console.warn('ℹ️ Backend will continue running in standalone mode for API & health check routes.');
+    console.error('❌ MongoDB connection error:', error);
     return false;
   }
 };

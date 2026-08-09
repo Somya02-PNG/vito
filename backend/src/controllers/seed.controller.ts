@@ -204,6 +204,7 @@ export const seedDatabase = async (
       user = await User.create({
         name: 'VITO Master User',
         email: 'user@vito.com',
+        phone: '+919876543210',
         passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
         role: 'admin',
       });
@@ -219,10 +220,21 @@ export const seedDatabase = async (
 
     // Wipe and seed Drivers
     await Driver.deleteMany({});
-    const driversWithUser = SEED_DRIVERS.map((d) => ({
-      ...d,
-      userId: user!._id,
-    }));
+    const driversWithUser = [];
+    for (let i = 0; i < SEED_DRIVERS.length; i++) {
+      const dData = SEED_DRIVERS[i];
+      let driverUser = await User.findOne({ email: `driver${i + 1}@vito.com` });
+      if (!driverUser) {
+        driverUser = await User.create({
+          name: `Driver Partner ${i + 1}`,
+          email: `driver${i + 1}@vito.com`,
+          phone: `+91987654320${i}`,
+          passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
+          role: 'driver',
+        });
+      }
+      driversWithUser.push({ ...dData, userId: driverUser._id });
+    }
     const createdDrivers = await Driver.insertMany(driversWithUser);
 
     // Wipe and seed Sample Trips & Expenses
