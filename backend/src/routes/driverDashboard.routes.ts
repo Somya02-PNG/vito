@@ -6,15 +6,16 @@ import {
   withdrawWallet,
   toggleAvailability,
 } from '../controllers/driverDashboard.controller';
-import { protect } from '../middleware/auth.middleware';
+import { protect, authorize } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Protected Driver Dashboard routes
-router.get('/driver/dashboard', protect, getDashboardStats);
-router.post('/driver/requests/:id/accept', protect, acceptRequest);
-router.post('/driver/requests/:id/reject', protect, rejectRequest);
-router.post('/driver/wallet/withdraw', protect, withdrawWallet);
-router.patch('/driver/toggle-availability', protect, toggleAvailability);
+// ─── All driver dashboard routes require: authenticated + partner OR driver role ─
+// NOTE: 'driver' role included for backward compatibility with existing seeded users
+router.get('/driver/dashboard', protect, authorize('partner', 'driver'), getDashboardStats);
+router.post('/driver/requests/:id/accept', protect, authorize('partner', 'driver'), acceptRequest);
+router.post('/driver/requests/:id/reject', protect, authorize('partner', 'driver'), rejectRequest);
+router.post('/driver/wallet/withdraw', protect, authorize('partner', 'driver'), withdrawWallet);
+router.patch('/driver/toggle-availability', protect, authorize('partner', 'driver'), toggleAvailability);
 
 export default router;

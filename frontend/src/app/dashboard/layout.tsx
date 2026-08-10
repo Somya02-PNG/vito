@@ -10,7 +10,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['customer']} redirectTo="/customer/login">
       <AppShell>{children}</AppShell>
     </ProtectedRoute>
   );

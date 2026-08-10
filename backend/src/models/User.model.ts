@@ -1,12 +1,19 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type UserRole = 'customer' | 'driver' | 'admin';
+export type UserRole = 'customer' | 'partner' | 'driver' | 'admin';
+// NOTE: 'driver' is kept for backward compatibility with existing seeded data.
+// New partner registrations use role='partner' + partnerType.
+
+export type UserStatus = 'active' | 'pending' | 'suspended' | 'blocked';
+export type PartnerType = 'driver' | 'rental_partner';
 
 export interface IUser extends Document {
   name: string;
   phone: string;
   email: string;
   role: UserRole;
+  partnerType: PartnerType | null;
+  status: UserStatus;
   passwordHash: string;
   createdAt: Date;
   updatedAt: Date;
@@ -41,10 +48,26 @@ const UserSchema = new Schema<IUser>(
     role: {
       type: String,
       enum: {
-        values: ['customer', 'driver', 'admin'],
+        values: ['customer', 'partner', 'driver', 'admin'],
         message: '{VALUE} is not a valid role',
       },
       default: 'customer',
+    },
+    partnerType: {
+      type: String,
+      enum: {
+        values: ['driver', 'rental_partner'],
+        message: '{VALUE} is not a valid partner type',
+      },
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: {
+        values: ['active', 'pending', 'suspended', 'blocked'],
+        message: '{VALUE} is not a valid status',
+      },
+      default: 'active',
     },
     passwordHash: {
       type: String,
@@ -62,6 +85,8 @@ const UserSchema = new Schema<IUser>(
 // Indexes
 UserSchema.index({ phone: 1 });
 UserSchema.index({ role: 1 });
+UserSchema.index({ status: 1 });
+UserSchema.index({ partnerType: 1 });
 
 const User = mongoose.model<IUser>('User', UserSchema);
 export default User;

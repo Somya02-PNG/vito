@@ -1,11 +1,13 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
-export type VerificationStatus = 'pending' | 'verified' | 'rejected';
+export type VerificationStatus = 'pending' | 'verified' | 'rejected' | 'suspended';
 
 export interface IDriver extends Document {
   userId: Types.ObjectId;
   licenseNumber: string;
   experience: number; // years
+  city: string;
+  profileImage: string;
   verificationStatus: VerificationStatus;
   rating: number;
   hourlyRate: number;
@@ -34,10 +36,19 @@ const DriverSchema = new Schema<IDriver>(
       required: [true, 'Experience (in years) is required'],
       min: [0, 'Experience cannot be negative'],
     },
+    city: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    profileImage: {
+      type: String,
+      default: '',
+    },
     verificationStatus: {
       type: String,
       enum: {
-        values: ['pending', 'verified', 'rejected'],
+        values: ['pending', 'verified', 'rejected', 'suspended'],
         message: '{VALUE} is not a valid verification status',
       },
       default: 'pending',
@@ -74,6 +85,7 @@ const DriverSchema = new Schema<IDriver>(
 DriverSchema.index({ verificationStatus: 1 });
 DriverSchema.index({ availability: 1 });
 DriverSchema.index({ rating: -1 });
+DriverSchema.index({ city: 1 });
 
 const Driver = mongoose.model<IDriver>('Driver', DriverSchema);
 export default Driver;

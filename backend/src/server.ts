@@ -15,6 +15,7 @@ import driverDashboardRoutes from './routes/driverDashboard.routes';
 import adminRoutes from './routes/admin.routes';
 import paymentRoutes from './routes/payment.routes';
 import seedRoutes from './routes/seed.routes';
+import partnerRoutes from './routes/partner.routes';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 
 dotenv.config();
@@ -50,6 +51,7 @@ app.use('/api', driverDashboardRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', seedRoutes);
+app.use('/api', partnerRoutes);
 
 // Root Endpoint
 app.get('/', (req: Request, res: Response) => {

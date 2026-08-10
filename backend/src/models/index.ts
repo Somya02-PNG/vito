@@ -1,8 +1,11 @@
 export { default as User } from './User.model';
-export type { IUser, UserRole } from './User.model';
+export type { IUser, UserRole, UserStatus, PartnerType } from './User.model';
 
 export { default as Driver } from './Driver.model';
 export type { IDriver, VerificationStatus } from './Driver.model';
+
+export { default as RentalPartner } from './RentalPartner.model';
+export type { IRentalPartner, RentalPartnerVerificationStatus } from './RentalPartner.model';
 
 export { default as Vehicle } from './Vehicle.model';
 export type { IVehicle, VehicleCategory, FuelType, TransmissionType, IVehicleLocation } from './Vehicle.model';

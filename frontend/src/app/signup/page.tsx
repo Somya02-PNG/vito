@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth, getDashboardPath } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -26,6 +26,13 @@ export default function SignupPage() {
   const router = useRouter();
 
   const [role, setRole] = useState<Role>('customer');
+
+  // Redirect if driver is trying to sign up here — send to the proper partner flow
+  useEffect(() => {
+    if (role === 'driver') {
+      router.replace('/partner/register');
+    }
+  }, [role, router]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -58,7 +65,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signup({ name: name.trim(), phone, email, password, role });
-      router.push('/dashboard');
+      router.push('/customer/dashboard');
     } catch (err: any) {
       setError(err.message || 'Signup failed. Please try again.');
     } finally {
