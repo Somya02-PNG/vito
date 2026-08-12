@@ -71,3 +71,30 @@ export const authorize = (...roles: string[]) => {
     next();
   };
 };
+
+// ─── Authorize Partner Type — Restrict to specific partner types ─────────────
+export const authorizePartnerType = (...types: string[]) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return next(new AppError('Not authenticated.', 401));
+    }
+
+    // If user is admin, allow access
+    if (req.user.role === 'admin') {
+      return next();
+    }
+
+    const effectivePartnerType = req.user.partnerType || (req.user.role === 'driver' ? 'driver' : null);
+    if (!effectivePartnerType || !types.includes(effectivePartnerType)) {
+      return next(
+        new AppError(
+          `Partner type '${effectivePartnerType || req.user.role}' is not authorized to access this resource.`,
+          403
+        )
+      );
+    }
+
+    next();
+  };
+};
+

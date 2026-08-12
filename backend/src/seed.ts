@@ -80,8 +80,8 @@ const runSeed = async () => {
 
     // ─── 3. Seed Test Customer ────────────────────────────────────────────────
     let customerUser = await User.findOne({ email: 'customer@vito.com' });
+    const customerHash = await bcrypt.hash('Customer@2026', 12);
     if (!customerUser) {
-      const customerHash = await bcrypt.hash('Customer@2026', 12);
       customerUser = await User.create({
         name: 'Test Customer',
         email: 'customer@vito.com',
@@ -92,6 +92,33 @@ const runSeed = async () => {
         partnerType: null,
       });
       console.log(`✅ Test customer created: customer@vito.com`);
+    } else {
+      customerUser.passwordHash = customerHash;
+      customerUser.role = 'customer';
+      customerUser.status = 'active';
+      await customerUser.save();
+    }
+
+    // ─── 3b. Seed Test Rental Partner ─────────────────────────────────────────
+    let rentalPartnerUser = await User.findOne({ email: 'rentalpartner@vito.com' });
+    const partnerHash = await bcrypt.hash('Partner@2026', 12);
+    if (!rentalPartnerUser) {
+      rentalPartnerUser = await User.create({
+        name: 'VITO Fleet Rentals',
+        email: 'rentalpartner@vito.com',
+        phone: '+919876599887',
+        passwordHash: partnerHash,
+        role: 'partner',
+        partnerType: 'rental_partner',
+        status: 'active',
+      });
+      console.log(`✅ Test rental partner created: rentalpartner@vito.com`);
+    } else {
+      rentalPartnerUser.passwordHash = partnerHash;
+      rentalPartnerUser.role = 'partner';
+      rentalPartnerUser.partnerType = 'rental_partner';
+      rentalPartnerUser.status = 'active';
+      await rentalPartnerUser.save();
     }
 
     // ─── 4. Seed Vehicles & Drivers ───────────────────────────────────────────
@@ -104,8 +131,8 @@ const runSeed = async () => {
     for (let i = 0; i < SEED_DRIVERS.length; i++) {
       const dData = SEED_DRIVERS[i];
       let driverUser = await User.findOne({ email: `driver${i + 1}@vito.com` });
+      const driverHash = await bcrypt.hash('Driver@2026', 12);
       if (!driverUser) {
-        const driverHash = await bcrypt.hash('Driver@2026', 12);
         driverUser = await User.create({
           name: `Driver Partner ${i + 1}`,
           email: `driver${i + 1}@vito.com`,
@@ -115,6 +142,12 @@ const runSeed = async () => {
           partnerType: 'driver',
           status: 'active',
         });
+      } else {
+        driverUser.passwordHash = driverHash;
+        driverUser.role = 'partner';
+        driverUser.partnerType = 'driver';
+        driverUser.status = 'active';
+        await driverUser.save();
       }
       drivers.push({ ...dData, userId: driverUser._id });
     }

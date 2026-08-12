@@ -44,6 +44,8 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
+  backendError: string | null;
+  refetchUser: () => Promise<void>;
   signup: (payload: SignupPayload) => Promise<void>;
   login: (payload: LoginPayload) => Promise<AuthUser>;
   logout: () => Promise<void>;
@@ -55,13 +57,11 @@ export const getDashboardPath = (user: AuthUser): string => {
   if (user.role === 'admin') return '/admin/dashboard';
   if (user.role === 'partner') {
     if (user.status === 'pending') return '/partner/pending';
-    if (user.partnerType === 'rental_partner') return '/partner/rental/dashboard';
-    return '/partner/driver/dashboard';
+    if (user.partnerType === 'rental_partner') return '/partner/dashboard';
+    return '/driver/home';
   }
-  // Backward compat: legacy 'driver' role
-  if (user.role === 'driver') return '/partner/driver/dashboard';
-  // Default: customer
-  return '/customer/dashboard';
+  if (user.role === 'driver') return '/driver/home';
+  return '/customer/home';
 };
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -71,21 +71,32 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   // Rehydrate session on mount
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetchAPI<{ user: AuthUser }>('/api/auth/me');
-        setUser(res.data?.user ?? null);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
+  const fetchUser = useCallback(async () => {
+    setLoading(true);
+    setBackendError(null);
+    try {
+      const res = await fetchAPI<{ user: AuthUser }>('/api/auth/me');
+      setUser(res.data?.user ?? null);
+    } catch (err: any) {
+      setUser(null);
+      // 401 indicates unauthenticated / session expired (normal for unauth state)
+      if (err?.statusCode === 401) {
+        setBackendError(null);
+      } else {
+        // Backend service outage or network issue
+        setBackendError(err?.message || 'Unable to connect to VITO backend service.');
       }
-    };
-    fetchUser();
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   const signup = useCallback(async (payload: SignupPayload) => {
     const res = await fetchAPI<{ user: AuthUser }>('/api/auth/signup', {
@@ -122,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         loading,
         isAuthenticated: !!user,
+        backendError,
+        refetchUser: fetchUser,
         signup,
         login,
         logout,
