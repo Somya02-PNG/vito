@@ -2,11 +2,16 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export type RideStatus =
   | 'requested'
-  | 'accepted'
-  | 'arriving'
+  | 'searching_driver'
+  | 'driver_assigned'
+  | 'driver_arriving'
+  | 'driver_arrived'
   | 'in_progress'
   | 'completed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'no_driver_available'
+  | 'accepted'
+  | 'arriving';
 
 export interface IRideLocation {
   address: string;
@@ -14,14 +19,29 @@ export interface IRideLocation {
   lng: number;
 }
 
+export interface IFareBreakdown {
+  baseFare: number;
+  distanceFare: number;
+  timeFare: number;
+  surgeMultiplier: number;
+  cancellationFee?: number;
+}
+
 export interface IRide extends Document {
   pickup: IRideLocation;
   drop: IRideLocation;
-  driverId: Types.ObjectId;
+  stops?: IRideLocation[];
+  vehicleType?: string;
+  driverId?: Types.ObjectId;
   riderId: Types.ObjectId;
   otp: string;
   status: RideStatus;
   fare: number;
+  fareBreakdown?: IFareBreakdown;
+  cancellationFee?: number;
+  rating?: number;
+  comment?: string;
+  tip?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +69,17 @@ const RideLocationSchema = new Schema<IRideLocation>(
   { _id: false }
 );
 
+const FareBreakdownSchema = new Schema<IFareBreakdown>(
+  {
+    baseFare: { type: Number, default: 50 },
+    distanceFare: { type: Number, default: 0 },
+    timeFare: { type: Number, default: 0 },
+    surgeMultiplier: { type: Number, default: 1.0 },
+    cancellationFee: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
 const RideSchema = new Schema<IRide>(
   {
     pickup: {
@@ -59,10 +90,19 @@ const RideSchema = new Schema<IRide>(
       type: RideLocationSchema,
       required: [true, 'Drop location is required'],
     },
+    stops: {
+      type: [RideLocationSchema],
+      default: [],
+    },
+    vehicleType: {
+      type: String,
+      enum: ['Mini', 'Sedan', 'SUV', 'Premium'],
+      default: 'Sedan',
+    },
     driverId: {
       type: Schema.Types.ObjectId,
       ref: 'Driver',
-      default: null, // Assigned after a driver accepts
+      default: null,
     },
     riderId: {
       type: Schema.Types.ObjectId,
@@ -78,7 +118,19 @@ const RideSchema = new Schema<IRide>(
     status: {
       type: String,
       enum: {
-        values: ['requested', 'accepted', 'arriving', 'in_progress', 'completed', 'cancelled'],
+        values: [
+          'requested',
+          'searching_driver',
+          'driver_assigned',
+          'driver_arriving',
+          'driver_arrived',
+          'in_progress',
+          'completed',
+          'cancelled',
+          'no_driver_available',
+          'accepted',
+          'arriving',
+        ],
         message: '{VALUE} is not a valid ride status',
       },
       default: 'requested',
@@ -87,6 +139,28 @@ const RideSchema = new Schema<IRide>(
       type: Number,
       required: [true, 'Fare is required'],
       min: [0, 'Fare cannot be negative'],
+    },
+    fareBreakdown: {
+      type: FareBreakdownSchema,
+      default: null,
+    },
+    cancellationFee: {
+      type: Number,
+      default: 0,
+    },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null,
+    },
+    comment: {
+      type: String,
+      default: '',
+    },
+    tip: {
+      type: Number,
+      default: 0,
     },
   },
   {
@@ -104,3 +178,4 @@ RideSchema.index({ createdAt: -1 });
 
 const Ride = mongoose.model<IRide>('Ride', RideSchema);
 export default Ride;
+

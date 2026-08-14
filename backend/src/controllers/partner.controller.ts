@@ -135,7 +135,7 @@ export const getPartnerDashboard = async (
         verificationStatus: 'verified',
         walletBalance: 0,
       });
-      rentalProfile = created.toObject();
+      rentalProfile = created.toObject() as any;
     }
 
     // Vehicles owned by this partner
@@ -165,7 +165,7 @@ export const getPartnerDashboard = async (
           availableVehicles,
           currentlyRented: activeCount,
           pendingRequests: pendingCount,
-          todayEarnings: rentalProfile.walletBalance || 0,
+          todayEarnings: rentalProfile?.walletBalance || 0,
         },
         vehicles,
         upcomingBookings,

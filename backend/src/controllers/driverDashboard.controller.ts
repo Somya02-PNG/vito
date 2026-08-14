@@ -82,7 +82,7 @@ export const getDashboardStats = async (
         availability: true,
         walletBalance: 12480,
       });
-      driver = created.toObject();
+      driver = created.toObject() as any;
     }
 
     res.status(200).json({
@@ -216,6 +216,64 @@ export const toggleAvailability = async (
       success: true,
       data: { availability: driver.availability },
       message: `Driver status is now ${driver.availability ? 'ONLINE' : 'OFFLINE'}.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Update Live Location ───────────────────────────────────────────────────
+export const updateLocation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!._id;
+    const { lat, lng, latitude, longitude } = req.body;
+
+    const finalLat = typeof lat === 'number' ? lat : (typeof latitude === 'number' ? latitude : parseFloat(lat || latitude));
+    const finalLng = typeof lng === 'number' ? lng : (typeof longitude === 'number' ? longitude : parseFloat(lng || longitude));
+
+    if (isNaN(finalLat) || isNaN(finalLng)) {
+      return next(new AppError('Valid latitude (lat) and longitude (lng) numbers are required.', 400));
+    }
+
+    if (finalLat < -90 || finalLat > 90 || finalLng < -180 || finalLng > 180) {
+      return next(new AppError('Coordinates out of range. Latitude must be between -90 and 90, longitude between -180 and 180.', 400));
+    }
+
+    let driver = await Driver.findOne({ userId });
+
+    const locationData = {
+      type: 'Point',
+      coordinates: [finalLng, finalLat] as [number, number],
+      lat: finalLat,
+      lng: finalLng,
+      updatedAt: new Date(),
+    };
+
+    if (!driver) {
+      driver = await Driver.create({
+        userId,
+        licenseNumber: `DL-04-2026-${Math.floor(100000 + Math.random() * 900000)}`,
+        experience: 5,
+        verificationStatus: 'verified',
+        hourlyRate: 180,
+        availability: true,
+        location: locationData,
+      });
+    } else {
+      driver.location = locationData;
+      await driver.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Driver location updated successfully.',
+      data: {
+        location: driver.location,
+      },
     });
   } catch (error) {
     next(error);
