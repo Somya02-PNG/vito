@@ -3,40 +3,32 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  Car,
-  Key,
-  UserCheck,
-  Sparkles,
-  Compass,
-  Shield,
-  UserCircle,
-} from 'lucide-react';
+import { ROLE_NAV_CONFIGS, RoleType } from './RoleNavConfig';
 
-const navItems = [
-  { label: 'Home',        href: '/customer/home',             icon: Home },
-  { label: 'Cab',         href: '/customer/cab',              icon: Car },
-  { label: 'Rentals',     href: '/customer/rentals',          icon: Key },
-  { label: 'Hire',        href: '/customer/driver-hire',     icon: UserCheck },
-  { label: 'AI Plan',     href: '/customer/ai-trip-planner', icon: Sparkles },
-  { label: 'Trips',       href: '/customer/trips',            icon: Compass },
-  { label: 'Safety',      href: '/customer/safety',           icon: Shield },
-  { label: 'Profile',     href: '/customer/profile',          icon: UserCircle },
-];
+interface BottomNavProps {
+  role?: RoleType;
+}
 
-export default function BottomNav() {
+export default function BottomNav({ role = 'customer' }: BottomNavProps) {
   const pathname = usePathname();
+  const config = ROLE_NAV_CONFIGS[role];
+  const items = config.bottomNavItems;
+  const theme = config.theme;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden">
       {/* Frosted glass background */}
-      <div className="bg-[#0A0E18]/95 backdrop-blur-xl border-t border-white/[0.06] pb-safe">
-        <div className="flex items-center justify-between px-1 h-16">
-          {navItems.map((item) => {
+      <div className="bg-[#090D18]/95 backdrop-blur-xl border-t border-white/[0.08] pb-safe shadow-2xl">
+        <div className="flex items-center justify-around px-1 h-16">
+          {items.map((item) => {
+            const basePath = item.href.split('?')[0];
             const isActive =
-              pathname === item.href ||
-              (item.href !== '/customer/home' && pathname.startsWith(item.href));
+              pathname === basePath ||
+              (basePath !== '/customer/home' &&
+                basePath !== '/driver/home' &&
+                basePath !== '/partner/dashboard' &&
+                basePath !== '/admin/dashboard' &&
+                pathname.startsWith(basePath));
 
             const Icon = item.icon;
 
@@ -46,24 +38,26 @@ export default function BottomNav() {
                 href={item.href}
                 className={`flex flex-col items-center justify-center gap-0.5 w-full h-full rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'text-blue-400 font-semibold'
+                    ? `${theme.activeText} font-bold`
                     : 'text-slate-500 active:text-slate-300'
                 }`}
               >
                 <div className="relative">
                   <Icon
-                    className={`w-4.5 h-4.5 transition-all ${
-                      isActive ? 'scale-110 text-blue-400' : ''
+                    className={`w-5 h-5 transition-all ${
+                      isActive ? `scale-110 ${theme.activeIcon}` : ''
                     }`}
                     strokeWidth={isActive ? 2.2 : 1.8}
                   />
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-500" />
+                    <div
+                      className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${theme.activeBg} bg-current`}
+                    />
                   )}
                 </div>
                 <span
-                  className={`text-[9px] leading-none mt-0.5 ${
-                    isActive ? 'text-blue-300 font-bold' : ''
+                  className={`text-[10px] leading-none mt-0.5 ${
+                    isActive ? `${theme.activeText} font-bold` : ''
                   }`}
                 >
                   {item.label}

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import AppShell from '@/components/navigation/AppShell';
+import RoleAppShell from '@/components/navigation/RoleAppShell';
 import { usePathname } from 'next/navigation';
 
 export default function CustomerLayout({
@@ -19,11 +19,9 @@ export default function CustomerLayout({
 
   return (
     <ProtectedRoute allowedRoles={['customer']} redirectTo="/login">
-      <AppShell>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          {children}
-        </div>
-      </AppShell>
+      <RoleAppShell role="customer">
+        {children}
+      </RoleAppShell>
     </ProtectedRoute>
   );
 }

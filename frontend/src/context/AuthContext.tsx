@@ -24,7 +24,7 @@ export interface SignupPayload {
   phone: string;
   email: string;
   password: string;
-  role: 'customer' | 'partner';
+  role: 'customer' | 'partner' | 'driver';
   partnerType?: PartnerType;
   licenseNumber?: string;
   experience?: number;

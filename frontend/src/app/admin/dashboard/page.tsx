@@ -1,8 +1,6 @@
-'use client';
-
 import React from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import AdminDashboardPage from '@/app/dashboard/admin/page';
+import AdminDashboardView from '@/components/AdminDashboardView';
 
 export default function AdminDashboardRoute() {
   return (
@@ -10,7 +8,7 @@ export default function AdminDashboardRoute() {
       allowedRoles={['admin']}
       redirectTo="/admin/login"
     >
-      <AdminDashboardPage />
+      <AdminDashboardView defaultTab="OVERVIEW" />
     </ProtectedRoute>
   );
 }
