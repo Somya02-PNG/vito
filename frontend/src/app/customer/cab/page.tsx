@@ -1,12 +1,13 @@
 'use client';
 
+import React from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import CabPage from '@/app/dashboard/cab/page';
+import CabBookingFlow from '@/components/cab/CabBookingFlow';
 
 export default function CustomerCabPage() {
   return (
     <ProtectedRoute allowedRoles={['customer']}>
-      <CabPage />
+      <CabBookingFlow />
     </ProtectedRoute>
   );
 }

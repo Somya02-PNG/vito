@@ -95,7 +95,7 @@ export default function CustomerTripsPage() {
             drop: r.drop,
             createdAt: r.createdAt,
             fare: r.fare,
-            driverName: r.driver?.name,
+            driverName: r.driverInfo?.name || r.driverId?.name || r.driver?.name,
             rating: r.rating,
           });
         });

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Ride from '../models/Ride.model';
+import Driver from '../models/Driver.model';
+import User from '../models/User.model';
 import { AppError } from '../middleware/error.middleware';
 
 // ─── Helper: Generate 4-digit OTP ──────────────────────────────────────────
@@ -7,7 +9,223 @@ const generate4DigitOTP = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
-// ─── Create Ride Request ───────────────────────────────────────────────────
+// ─── Pricing Rates Configuration ────────────────────────────────────────────
+export interface CategoryPricing {
+  id: 'go' | 'comfort' | 'xl';
+  name: string;
+  categoryName: string;
+  vehicleModel: string;
+  seats: number;
+  baseFare: number;
+  perKmRate: number;
+  perMinRate: number;
+  bookingFee: number;
+  description: string;
+  icon: string;
+}
+
+export const CATEGORY_PRICING: Record<string, CategoryPricing> = {
+  go: {
+    id: 'go',
+    name: 'VITO Go',
+    categoryName: 'Sedan / Hatchback',
+    vehicleModel: 'Maruti Dzire / WagonR',
+    seats: 4,
+    baseFare: 50,
+    perKmRate: 14,
+    perMinRate: 1.5,
+    bookingFee: 20,
+    description: 'Affordable, compact rides for everyday travel',
+    icon: 'car',
+  },
+  comfort: {
+    id: 'comfort',
+    name: 'VITO Comfort',
+    categoryName: 'Premium Sedan',
+    vehicleModel: 'Honda City / Hyundai Verna',
+    seats: 4,
+    baseFare: 80,
+    perKmRate: 18,
+    perMinRate: 2.0,
+    bookingFee: 25,
+    description: 'Top-rated drivers & newer, spacious sedans',
+    icon: 'sparkles',
+  },
+  xl: {
+    id: 'xl',
+    name: 'VITO XL',
+    categoryName: 'Spacious SUV',
+    vehicleModel: 'Toyota Innova / Ertiga',
+    seats: 6,
+    baseFare: 120,
+    perKmRate: 24,
+    perMinRate: 3.0,
+    bookingFee: 35,
+    description: 'Extra room for groups & family with luggage',
+    icon: 'users',
+  },
+};
+
+// ─── Surge Multiplier Lookup Table (Static time-of-day table) ───────────────
+export const getSurgeMultiplier = (date: Date = new Date()): { multiplier: number; label: string } => {
+  const hour = date.getHours();
+  // Morning peak: 7 AM – 10 AM (1.25x)
+  if (hour >= 7 && hour < 10) {
+    return { multiplier: 1.25, label: 'Morning Peak Surge (1.25x)' };
+  }
+  // Evening peak: 6 PM – 9 PM (1.30x)
+  if (hour >= 18 && hour < 21) {
+    return { multiplier: 1.3, label: 'Evening Peak Surge (1.30x)' };
+  }
+  // Late night: 11 PM – 5 AM (1.15x)
+  if (hour >= 23 || hour < 5) {
+    return { multiplier: 1.15, label: 'Late Night Surge (1.15x)' };
+  }
+  // Standard
+  return { multiplier: 1.0, label: 'Standard Rate' };
+};
+
+// ─── Calculate Itemized Fare Breakdown ───────────────────────────────────────
+export const calculateFareBreakdown = (
+  categoryKey: string,
+  distanceKm: number,
+  durationMin: number,
+  scheduledTime?: Date | null
+) => {
+  const config = CATEGORY_PRICING[categoryKey.toLowerCase()] || CATEGORY_PRICING.go;
+  const surge = getSurgeMultiplier(scheduledTime || new Date());
+
+  const distanceCharge = Math.round(distanceKm * config.perKmRate);
+  const timeCharge = Math.round(durationMin * config.perMinRate);
+  const subtotalBeforeSurge = config.baseFare + distanceCharge + timeCharge;
+  const surgedSubtotal = Math.round(subtotalBeforeSurge * surge.multiplier);
+  const surgeDifference = Math.max(0, surgedSubtotal - subtotalBeforeSurge);
+
+  const subtotal = surgedSubtotal + config.bookingFee;
+  const taxes = Math.round(subtotal * 0.05); // 5% GST
+  const total = subtotal + taxes;
+
+  const minRange = Math.round(total * 0.95);
+  const maxRange = Math.round(total * 1.05);
+
+  return {
+    category: config.id,
+    name: config.name,
+    categoryName: config.categoryName,
+    vehicleModel: config.vehicleModel,
+    seats: config.seats,
+    baseFare: config.baseFare,
+    distanceCharge,
+    timeCharge,
+    surgeMultiplier: surge.multiplier,
+    surgeLabel: surge.label,
+    surgeAmount: surgeDifference,
+    bookingFee: config.bookingFee,
+    taxes,
+    total,
+    fareRange: `₹${minRange}–₹${maxRange}`,
+    icon: config.icon,
+    description: config.description,
+  };
+};
+
+// ─── 1. Estimate Fare Endpoint ──────────────────────────────────────────────
+export const estimateFare = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { distanceKm, durationMin, scheduledTime } = req.body;
+    const dist = Number(distanceKm) || 8.5;
+    const dur = Number(durationMin) || 20;
+    const scheduleDate = scheduledTime ? new Date(scheduledTime) : null;
+
+    const categories = Object.keys(CATEGORY_PRICING).map((key) => {
+      return calculateFareBreakdown(key, dist, dur, scheduleDate);
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        distanceKm: dist,
+        durationMin: dur,
+        categories,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── 2. Get Available Drivers for Matching ──────────────────────────────────
+export const getAvailableDrivers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { lat, lng, category = 'go' } = req.query;
+    const baseLat = Number(lat) || 28.6315;
+    const baseLng = Number(lng) || 77.2167;
+
+    // Query DB for verified drivers
+    let dbDrivers = await Driver.find({ verificationStatus: 'verified' })
+      .populate('userId', 'name phone email')
+      .limit(6);
+
+    // Fallback seed list if no DB drivers
+    const seedPool = [
+      { name: 'Rajesh Kumar', vehicleModel: 'Maruti Dzire', vehicleNo: 'DL 01 AB 4829', rating: 4.9, experience: 8, phone: '+91 98765 43210' },
+      { name: 'Suresh Sharma', vehicleModel: 'Honda City', vehicleNo: 'DL 03 EV 9102', rating: 4.85, experience: 6, phone: '+91 98123 45678' },
+      { name: 'Vikram Singh', vehicleModel: 'Toyota Innova', vehicleNo: 'DL 04 XY 7741', rating: 4.95, experience: 11, phone: '+91 97111 22334' },
+      { name: 'Anita Verma', vehicleModel: 'Hyundai Verna', vehicleNo: 'DL 02 CD 1289', rating: 4.9, experience: 7, phone: '+91 99999 88888' },
+      { name: 'Amit Patel', vehicleModel: 'Tata Tigor', vehicleNo: 'DL 01 TR 3311', rating: 4.75, experience: 5, phone: '+91 98888 77777' },
+    ];
+
+    const drivers = seedPool.map((driver, index) => {
+      const dbMatch = dbDrivers[index];
+      const name = (dbMatch?.userId as any)?.name || driver.name;
+      const phone = (dbMatch?.userId as any)?.phone || driver.phone;
+      const rating = dbMatch?.rating || driver.rating;
+      const experience = dbMatch?.experience || driver.experience;
+
+      // Realistic driver coordinates within 1-3km of pickup
+      const angle = (index * 72 * Math.PI) / 180;
+      const radius = 0.008 + index * 0.003;
+      const driverLat = baseLat + Math.cos(angle) * radius;
+      const driverLng = baseLng + Math.sin(angle) * radius;
+      const etaMinutes = 2 + index * 1.5;
+
+      return {
+        id: dbMatch?._id?.toString() || `drv_${index + 1}`,
+        name,
+        phone,
+        rating,
+        experience,
+        totalTrips: 840 + index * 260,
+        vehicleModel: driver.vehicleModel,
+        vehicleNo: driver.vehicleNo,
+        category: category.toString(),
+        lat: driverLat,
+        lng: driverLng,
+        eta: `${Math.ceil(etaMinutes)} mins`,
+        etaMinutes: Math.ceil(etaMinutes),
+        avatar: name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
+        badges: ['Identity Verified', 'License Verified', 'Police Background Verified'],
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: { drivers },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── 3. Create Ride Request ─────────────────────────────────────────────────
 export const createRide = async (
   req: Request,
   res: Response,
@@ -15,7 +233,20 @@ export const createRide = async (
 ) => {
   try {
     const riderId = req.user!._id;
-    const { pickup, drop, fare, driverInfo } = req.body;
+    const {
+      pickup,
+      drop,
+      stops = [],
+      category = 'go',
+      fare,
+      fareBreakdown,
+      distance = 0,
+      duration = 0,
+      scheduledFor = null,
+      driverInfo,
+      driverId,
+      paymentMethod = 'upi',
+    } = req.body;
 
     if (!pickup || !drop || !fare) {
       return next(new AppError('Pickup location, drop location, and fare are required.', 400));
@@ -43,15 +274,26 @@ export const createRide = async (
         lat: drop.lat,
         lng: drop.lng,
       },
+      stops: Array.isArray(stops) ? stops : [],
+      category,
       fare,
+      fareBreakdown: fareBreakdown || {},
+      distance,
+      duration,
+      scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
       otp,
-      status: 'accepted', // Driver auto-accepts in simulated flow
+      status: 'driver_assigned',
+      driverId: driverId || null,
+      driverInfo: driverInfo || null,
+      paymentMethod,
+      paymentStatus: 'pending',
     });
 
     res.status(201).json({
       success: true,
       data: {
         ride,
+        otp,
         driverInfo: driverInfo || null,
       },
     });
@@ -60,7 +302,7 @@ export const createRide = async (
   }
 };
 
-// ─── Verify OTP to Start Trip ──────────────────────────────────────────────
+// ─── 4. Verify OTP to Start Trip ────────────────────────────────────────────
 export const verifyOTP = async (
   req: Request,
   res: Response,
@@ -79,8 +321,8 @@ export const verifyOTP = async (
       return next(new AppError('Ride not found.', 404));
     }
 
-    if (ride.otp !== otp.trim()) {
-      return next(new AppError('Incorrect OTP. Please enter the valid 4-digit code.', 400));
+    if (ride.otp !== otp.toString().trim()) {
+      return next(new AppError('Incorrect OTP. Please enter the valid 4-digit code displayed on screen.', 400));
     }
 
     ride.status = 'in_progress';
@@ -96,7 +338,7 @@ export const verifyOTP = async (
   }
 };
 
-// ─── Update Ride Status (Complete / Cancel) ────────────────────────────────
+// ─── 5. Update Ride Status ──────────────────────────────────────────────────
 export const updateRideStatus = async (
   req: Request,
   res: Response,
@@ -104,10 +346,22 @@ export const updateRideStatus = async (
 ) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, paymentStatus } = req.body;
 
-    if (!status || !['completed', 'cancelled'].includes(status)) {
-      return next(new AppError('Valid status ("completed" or "cancelled") is required.', 400));
+    const validStatuses = [
+      'requested',
+      'searching',
+      'accepted',
+      'driver_assigned',
+      'arriving',
+      'arrived',
+      'in_progress',
+      'completed',
+      'cancelled',
+    ];
+
+    if (!status || !validStatuses.includes(status)) {
+      return next(new AppError(`Invalid ride status. Allowed values: ${validStatuses.join(', ')}`, 400));
     }
 
     const ride = await Ride.findById(id);
@@ -115,7 +369,10 @@ export const updateRideStatus = async (
       return next(new AppError('Ride not found.', 404));
     }
 
-    ride.status = status;
+    ride.status = status as any;
+    if (paymentStatus) {
+      ride.paymentStatus = paymentStatus;
+    }
     await ride.save();
 
     res.status(200).json({
@@ -127,3 +384,133 @@ export const updateRideStatus = async (
     next(error);
   }
 };
+
+// ─── 6. Rate Ride & Driver ──────────────────────────────────────────────────
+export const rateRide = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { rating, feedbackTags = [], feedbackComment = '' } = req.body;
+
+    const numRating = Number(rating);
+    if (!numRating || numRating < 1 || numRating > 5) {
+      return next(new AppError('Rating must be a number between 1 and 5.', 400));
+    }
+
+    const ride = await Ride.findById(id);
+    if (!ride) {
+      return next(new AppError('Ride not found.', 404));
+    }
+
+    ride.rating = numRating;
+    ride.feedbackTags = feedbackTags;
+    ride.feedbackComment = feedbackComment;
+    await ride.save();
+
+    // Update Driver aggregate rating if driverId is linked
+    if (ride.driverId) {
+      const driver = await Driver.findById(ride.driverId);
+      if (driver) {
+        // Simple incremental moving average update
+        const currentRating = driver.rating || 5;
+        driver.rating = parseFloat(((currentRating * 9 + numRating) / 10).toFixed(2));
+        await driver.save();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { ride },
+      message: 'Thank you for your rating and feedback!',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── 7. Cancel Ride with Cancellation Fee Logic ─────────────────────────────
+export const cancelRide = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Customer cancelled' } = req.body;
+
+    const ride = await Ride.findById(id);
+    if (!ride) {
+      return next(new AppError('Ride not found.', 404));
+    }
+
+    // Cancellation fee applies only if driver was assigned / en-route / arrived
+    let fee = 0;
+    if (['driver_assigned', 'arriving', 'arrived'].includes(ride.status)) {
+      fee = 50; // Standard cancellation fee of ₹50
+    }
+
+    ride.status = 'cancelled';
+    ride.cancellationFee = fee;
+    await ride.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        ride,
+        cancellationFee: fee,
+        reason,
+      },
+      message: fee > 0 ? `Ride cancelled. A fee of ₹${fee} was applied.` : 'Ride cancelled with no fee.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── 8. Get Current User's Ride History ─────────────────────────────────────
+export const getMyRides = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const riderId = req.user!._id;
+    const rides = await Ride.find({ riderId })
+      .sort({ createdAt: -1 })
+      .populate('driverId', 'rating experience licenseNumber');
+
+    res.status(200).json({
+      success: true,
+      data: { rides },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── 9. Get Single Ride Details ─────────────────────────────────────────────
+export const getRideById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const ride = await Ride.findById(id).populate('driverId', 'rating experience licenseNumber');
+
+    if (!ride) {
+      return next(new AppError('Ride not found.', 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { ride },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

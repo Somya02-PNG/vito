@@ -118,7 +118,7 @@ export const getTrips = async (
           { userId, name: 'Alex Mercer' },
         ],
       });
-      trips = [demoTrip.toObject()];
+      trips = [demoTrip.toObject() as any];
     }
 
     res.status(200).json({

@@ -82,7 +82,7 @@ export const getDashboardStats = async (
         availability: true,
         walletBalance: 12480,
       });
-      driver = created.toObject();
+      driver = created.toObject() as any;
     }
 
     res.status(200).json({
