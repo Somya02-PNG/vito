@@ -1,22 +1,92 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
-export type DriverHireStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+export type DriverHireStatus =
+  | 'DRAFT'
+  | 'SEARCHING'
+  | 'REQUESTED'
+  | 'ACCEPTED'
+  | 'CONFIRMED'
+  | 'DRIVER_EN_ROUTE'
+  | 'DRIVER_ARRIVED'
+  | 'SERVICE_STARTED'
+  | 'SERVICE_IN_PROGRESS'
+  | 'SERVICE_COMPLETED'
+  | 'PAYMENT_COMPLETED'
+  | 'RATED'
+  | 'DECLINED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'pending'
+  | 'confirmed'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled';
 
 export interface IDriverHire extends Document {
   userId: Types.ObjectId;
+  driverId?: Types.ObjectId | string | null;
   driverName: string;
   driverPhone: string;
+  driverAvatar?: string;
+  driverRating?: number;
+  serviceType: 'hourly' | 'full_day' | 'outstation' | 'airport' | 'event';
   hourlyRate: number;
   pickupLocation: string;
+  pickupCoords?: { lat: number; lng: number };
+  destinationLocation?: string;
+  destinationCoords?: { lat: number; lng: number };
   bookingDate: Date;
   startTime: string;
   hours: number;
+  durationDays?: number;
+  returnRequired?: boolean;
   isOutstation: boolean;
+  vehicleDetails?: {
+    type: string;
+    makeModel: string;
+    transmission: string;
+    fuel: string;
+  };
+  requirements?: {
+    minExperience: number;
+    languages: string[];
+    experienceTags: string[];
+    preferences: string[];
+    specialNotes?: string;
+  };
+  fareBreakdown?: {
+    baseFare: number;
+    durationCharge: number;
+    outstationAllowance: number;
+    nightCharge: number;
+    platformFee: number;
+    taxes: number;
+    totalFare: number;
+    extraHoursFee?: number;
+  };
   baseFare: number;
   nightCharge: number;
   outstationAllowance: number;
   totalFare: number;
+  servicePin: string;
   status: DriverHireStatus;
+  startedAt?: Date;
+  completedAt?: Date;
+  actualHours?: number;
+  extraHours?: number;
+  extraHoursConfirmed?: boolean;
+  paymentMethod?: string;
+  paymentStatus?: 'pending' | 'completed' | 'refunded';
+  multiRating?: {
+    driving: number;
+    professionalism: number;
+    punctuality: number;
+    vehicleHandling: number;
+    averageRating: number;
+    comment?: string;
+  };
+  cancellationFee?: number;
+  cancellationReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +98,11 @@ const DriverHireSchema = new Schema<IDriverHire>(
       ref: 'User',
       required: [true, 'User ID is required'],
     },
+    driverId: {
+      type: Schema.Types.Mixed,
+      ref: 'Driver',
+      default: null,
+    },
     driverName: {
       type: String,
       required: [true, 'Driver name is required'],
@@ -38,6 +113,19 @@ const DriverHireSchema = new Schema<IDriverHire>(
       required: [true, 'Driver phone is required'],
       trim: true,
     },
+    driverAvatar: {
+      type: String,
+      default: 'DP',
+    },
+    driverRating: {
+      type: Number,
+      default: 4.9,
+    },
+    serviceType: {
+      type: String,
+      enum: ['hourly', 'full_day', 'outstation', 'airport', 'event'],
+      default: 'full_day',
+    },
     hourlyRate: {
       type: Number,
       required: [true, 'Hourly rate is required'],
@@ -47,6 +135,19 @@ const DriverHireSchema = new Schema<IDriverHire>(
       type: String,
       required: [true, 'Pickup location is required'],
       trim: true,
+    },
+    pickupCoords: {
+      lat: { type: Number, default: 28.6315 },
+      lng: { type: Number, default: 77.2167 },
+    },
+    destinationLocation: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    destinationCoords: {
+      lat: { type: Number },
+      lng: { type: Number },
     },
     bookingDate: {
       type: Date,
@@ -61,9 +162,34 @@ const DriverHireSchema = new Schema<IDriverHire>(
       required: [true, 'Number of hours is required'],
       min: [1, 'Must book at least 1 hour'],
     },
+    durationDays: {
+      type: Number,
+      default: 1,
+    },
+    returnRequired: {
+      type: Boolean,
+      default: true,
+    },
     isOutstation: {
       type: Boolean,
       default: false,
+    },
+    vehicleDetails: {
+      type: { type: String, default: 'Sedan' },
+      makeModel: { type: String, default: 'Honda City' },
+      transmission: { type: String, default: 'Automatic' },
+      fuel: { type: String, default: 'Petrol' },
+    },
+    requirements: {
+      minExperience: { type: Number, default: 3 },
+      languages: [{ type: String }],
+      experienceTags: [{ type: String }],
+      preferences: [{ type: String }],
+      specialNotes: { type: String, default: '' },
+    },
+    fareBreakdown: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
     baseFare: {
       type: Number,
@@ -85,14 +211,35 @@ const DriverHireSchema = new Schema<IDriverHire>(
       required: true,
       min: 0,
     },
+    servicePin: {
+      type: String,
+      default: '4829',
+    },
     status: {
       type: String,
-      enum: {
-        values: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'],
-        message: '{VALUE} is not a valid hire status',
-      },
-      default: 'confirmed',
+      default: 'CONFIRMED',
     },
+    startedAt: { type: Date },
+    completedAt: { type: Date },
+    actualHours: { type: Number },
+    extraHours: { type: Number, default: 0 },
+    extraHoursConfirmed: { type: Boolean, default: false },
+    paymentMethod: { type: String, default: 'UPI' },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'completed', 'refunded'],
+      default: 'pending',
+    },
+    multiRating: {
+      driving: { type: Number },
+      professionalism: { type: Number },
+      punctuality: { type: Number },
+      vehicleHandling: { type: Number },
+      averageRating: { type: Number },
+      comment: { type: String },
+    },
+    cancellationFee: { type: Number, default: 0 },
+    cancellationReason: { type: String },
   },
   {
     timestamps: true,
@@ -103,7 +250,9 @@ const DriverHireSchema = new Schema<IDriverHire>(
 
 // Indexes
 DriverHireSchema.index({ userId: 1 });
+DriverHireSchema.index({ driverId: 1 });
 DriverHireSchema.index({ status: 1 });
+DriverHireSchema.index({ bookingDate: 1 });
 
 const DriverHire = mongoose.model<IDriverHire>('DriverHire', DriverHireSchema);
 export default DriverHire;

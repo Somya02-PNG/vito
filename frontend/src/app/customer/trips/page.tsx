@@ -43,18 +43,22 @@ interface Trip {
 }
 
 const TYPE_LABELS: Record<TripType, { label: string; icon: React.ElementType; color: string }> = {
-  ride: { label: 'Cab Ride', icon: Car, color: '#3B82F6' },
-  rental: { label: 'Rental', icon: Key, color: '#10B981' },
-  driver_hire: { label: 'Driver Hire', icon: UserCheck, color: '#F59E0B' },
+  ride: { label: 'Cab Ride', icon: Car, color: '#00A99D' },
+  rental: { label: 'Car Rental', icon: Key, color: '#3984E8' },
+  driver_hire: { label: 'Chauffeur Hire', icon: UserCheck, color: '#C9A45C' },
 };
 
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  active: { label: 'Active', icon: Navigation2, color: '#3B82F6', bg: 'bg-blue-500/10 text-blue-300 border-blue-500/20' },
-  ongoing: { label: 'Ongoing', icon: Navigation2, color: '#3B82F6', bg: 'bg-blue-500/10 text-blue-300 border-blue-500/20' },
-  completed: { label: 'Completed', icon: CheckCircle2, color: '#10B981', bg: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' },
-  cancelled: { label: 'Cancelled', icon: XCircle, color: '#EF4444', bg: 'bg-red-500/10 text-red-300 border-red-500/20' },
-  pending: { label: 'Pending', icon: Clock, color: '#F59E0B', bg: 'bg-amber-500/10 text-amber-300 border-amber-500/20' },
-  accepted: { label: 'Accepted', icon: Clock, color: '#8B5CF6', bg: 'bg-violet-500/10 text-violet-300 border-violet-500/20' },
+const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; badgeClass: string }> = {
+  active: { label: 'Active', icon: Navigation2, badgeClass: 'badge-vito-live' },
+  ongoing: { label: 'Ongoing', icon: Navigation2, badgeClass: 'badge-vito-live' },
+  CONFIRMED: { label: 'Confirmed', icon: CheckCircle2, badgeClass: 'badge-vito-available' },
+  SERVICE_STARTED: { label: 'In Service', icon: Navigation2, badgeClass: 'badge-vito-live' },
+  SERVICE_COMPLETED: { label: 'Completed', icon: CheckCircle2, badgeClass: 'badge-vito-available' },
+  completed: { label: 'Completed', icon: CheckCircle2, badgeClass: 'badge-vito-available' },
+  cancelled: { label: 'Cancelled', icon: XCircle, badgeClass: 'badge-vito-danger' },
+  CANCELLED: { label: 'Cancelled', icon: XCircle, badgeClass: 'badge-vito-danger' },
+  pending: { label: 'Pending', icon: Clock, badgeClass: 'badge-vito-pending' },
+  REQUESTED: { label: 'Requested', icon: Clock, badgeClass: 'badge-vito-pending' },
 };
 
 function formatDate(dateStr: string) {
@@ -79,8 +83,9 @@ export default function CustomerTripsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [ridesRes] = await Promise.allSettled([
+      const [ridesRes, hiresRes] = await Promise.allSettled([
         fetchAPI<{ rides: any[] }>('/api/rides/my'),
+        fetchAPI<{ hires: any[] }>('/api/driver-hire/my-hires'),
       ]);
 
       const allTrips: Trip[] = [];
@@ -101,6 +106,22 @@ export default function CustomerTripsPage() {
         });
       }
 
+      if (hiresRes.status === 'fulfilled' && hiresRes.value.data?.hires) {
+        hiresRes.value.data.hires.forEach((h: any) => {
+          allTrips.push({
+            _id: h._id,
+            type: 'driver_hire',
+            status: h.status,
+            pickupLocation: h.pickupLocation,
+            dropLocation: h.destinationLocation || `${h.hours || 8} hrs duty`,
+            createdAt: h.createdAt,
+            fare: h.totalFare,
+            driverName: h.driverName,
+            rating: h.multiRating?.averageRating,
+          });
+        });
+      }
+
       setTrips(allTrips.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (err: any) {
       setError(err?.message || 'Failed to load trips');
@@ -109,81 +130,101 @@ export default function CustomerTripsPage() {
     }
   };
 
-  useEffect(() => { fetchTrips(); }, []);
+  useEffect(() => {
+    fetchTrips();
+  }, []);
 
   const filtered = activeTab === 'all'
     ? trips
     : trips.filter((t) => {
-        if (activeTab === 'active') return ['active', 'ongoing', 'pending', 'accepted'].includes(t.status);
-        if (activeTab === 'completed') return t.status === 'completed';
-        if (activeTab === 'cancelled') return t.status === 'cancelled';
+        const s = t.status.toLowerCase();
+        if (activeTab === 'active') return ['active', 'ongoing', 'pending', 'requested', 'confirmed', 'service_started'].includes(s);
+        if (activeTab === 'completed') return ['completed', 'service_completed', 'rated', 'payment_completed'].includes(s);
+        if (activeTab === 'cancelled') return ['cancelled', 'declined', 'expired'].includes(s);
         return true;
       });
 
   const stats = {
     total: trips.length,
-    active: trips.filter((t) => ['active', 'ongoing', 'pending', 'accepted'].includes(t.status)).length,
-    completed: trips.filter((t) => t.status === 'completed').length,
+    active: trips.filter((t) => ['active', 'ongoing', 'pending', 'requested', 'confirmed', 'service_started'].includes(t.status.toLowerCase())).length,
+    completed: trips.filter((t) => ['completed', 'service_completed', 'rated', 'payment_completed'].includes(t.status.toLowerCase())).length,
   };
 
   const tabs: { key: TripStatus; label: string; count: number }[] = [
-    { key: 'all', label: 'All Trips', count: trips.length },
-    { key: 'active', label: 'Active', count: stats.active },
+    { key: 'all', label: 'All Trips & Duties', count: trips.length },
+    { key: 'active', label: 'Active & Upcoming', count: stats.active },
     { key: 'completed', label: 'Completed', count: stats.completed },
-    { key: 'cancelled', label: 'Cancelled', count: trips.filter((t) => t.status === 'cancelled').length },
+    { key: 'cancelled', label: 'Cancelled', count: trips.filter((t) => ['cancelled', 'declined', 'expired'].includes(t.status.toLowerCase())).length },
   ];
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-1 h-7 rounded-full bg-gradient-to-b from-blue-500 to-blue-500/50" />
-            <h1 className="text-2xl font-black text-white tracking-tight">My Trips</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-[#00C2B3]" />
+            <p className="text-[10px] font-bold text-[#8995A5] uppercase tracking-widest">
+              VITO Mobility Activity
+            </p>
           </div>
-          <p className="text-sm text-slate-400 pl-4">Your complete ride, rental, and driver hire history</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#0B1728] dark:text-white tracking-tight">
+            My Trips & Services
+          </h1>
+          <p className="text-xs text-[#526174] dark:text-slate-400 mt-0.5">
+            Your unified ride, rental, and private chauffeur hire records
+          </p>
         </div>
-        <Link
-          href="/customer/cab"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/25 transition-all active:scale-95 shrink-0"
-        >
-          <Car className="w-4 h-4" />
-          Book New Ride
-        </Link>
+
+        <div className="flex gap-2">
+          <Link
+            href="/customer/cab"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#07111F] hover:bg-[#0B1728] text-white font-bold text-xs shadow-md transition-all active:scale-95"
+          >
+            <Car className="w-4 h-4 text-[#00C2B3]" />
+            Book Cab
+          </Link>
+          <Link
+            href="/customer/driver-hire"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#F0FCFB] border border-[#00C2B3]/40 text-[#00A99D] font-bold text-xs shadow-sm hover:bg-[#E6FAF8] transition-all active:scale-95"
+          >
+            <UserCheck className="w-4 h-4" />
+            Hire Driver
+          </Link>
+        </div>
       </div>
 
       {/* Stats Row */}
       {!loading && !error && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Total Trips', value: stats.total, color: '#3B82F6' },
-            { label: 'Active', value: stats.active, color: '#06B6D4' },
-            { label: 'Completed', value: stats.completed, color: '#10B981' },
+            { label: 'Total Mobility Records', value: stats.total },
+            { label: 'Active / Scheduled', value: stats.active },
+            { label: 'Completed Safely', value: stats.completed },
           ].map((s) => (
-            <div key={s.label} className="p-4 rounded-2xl bg-[#0B0F1C] border border-white/[0.06] text-center">
-              <p className="text-2xl font-black text-white">{s.value}</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">{s.label}</p>
+            <div key={s.label} className="p-4 rounded-2xl bg-[#FFFFFF] dark:bg-[#0B1728] border border-[#E5EAF0] dark:border-[#17334F] text-center shadow-sm">
+              <p className="text-2xl font-black text-[#0B1728] dark:text-white">{s.value}</p>
+              <p className="text-[11px] text-[#526174] dark:text-slate-400 mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-[#0B0F1C] border border-white/[0.06] rounded-xl w-fit">
+      <div className="flex items-center gap-1.5 p-1.5 bg-[#F1F5F8] dark:bg-[#10243A] rounded-2xl w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === tab.key
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#07111F] text-white shadow-md'
+                : 'text-[#526174] dark:text-slate-400 hover:text-[#0B1728]'
             }`}
           >
             {tab.label}
             {tab.count > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key ? 'bg-white/20' : 'bg-white/5'}`}>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-[#E5EAF0] text-[#526174]'}`}>
                 {tab.count}
               </span>
             )}
@@ -192,73 +233,70 @@ export default function CustomerTripsPage() {
       </div>
 
       {/* Content */}
-      <div className="p-5 rounded-2xl bg-[#0B0F1C] border border-white/[0.06]">
+      <div className="p-6 rounded-3xl bg-[#FFFFFF] dark:bg-[#0B1728] border border-[#E5EAF0] dark:border-[#17334F] shadow-sm">
         {loading ? (
-          <SkeletonList count={5} />
+          <SkeletonList count={4} />
         ) : error ? (
           <ErrorState message={error} onRetry={fetchTrips} />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={Compass}
-            title={activeTab === 'all' ? 'No trips yet' : `No ${activeTab} trips`}
-            description={activeTab === 'all'
-              ? 'Book your first ride, rent a vehicle, or hire a driver to get started.'
-              : `You don't have any ${activeTab} trips right now.`}
-            action={{ label: 'Book a Ride', href: '/customer/cab' }}
-            accentColor="#3B82F6"
+            title={activeTab === 'all' ? 'No trips or hires recorded' : `No ${activeTab} records`}
+            description="Your next journey begins with VITO. Book an instant cab or hire a professional chauffeur."
+            action={{ label: 'Hire a Driver', href: '/customer/driver-hire' }}
+            accentColor="#00C2B3"
           />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filtered.map((trip) => {
               const typeConf = TYPE_LABELS[trip.type];
               const statusConf = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG['pending'];
               const TypeIcon = typeConf.icon;
-              const StatusIcon = statusConf.icon;
 
               return (
                 <div
                   key={trip._id}
-                  className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] transition-colors cursor-pointer group"
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-[#F7F9FC] dark:bg-[#10243A] hover:bg-[#F1F5F8] border border-[#E5EAF0] dark:border-[#17334F] transition-all cursor-pointer group"
                 >
-                  {/* Type Icon */}
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `${typeConf.color}15`, border: `1px solid ${typeConf.color}30` }}
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"
+                    style={{ background: `${typeConf.color}15`, border: `1px solid ${typeConf.color}35` }}
                   >
                     <TypeIcon className="w-5 h-5" style={{ color: typeConf.color }} />
                   </div>
 
-                  {/* Details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-white">{typeConf.label}</span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${statusConf.bg}`}>
+                      <span className="text-xs font-bold text-[#0B1728] dark:text-white">{typeConf.label}</span>
+                      <span className={statusConf.badgeClass}>
                         {statusConf.label}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                    <p className="text-xs text-[#526174] dark:text-slate-400 mt-1 truncate font-medium">
                       {trip.pickup?.address || trip.pickupLocation || 'Pickup'} → {trip.drop?.address || trip.dropLocation || 'Destination'}
                     </p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-[#8995A5]">
+                      <span className="flex items-center gap-1">
                         <CalendarDays className="w-3 h-3" />
                         {formatDate(trip.createdAt)}
                       </span>
+                      {trip.driverName && (
+                        <span>Chauffeur: {trip.driverName}</span>
+                      )}
                       {trip.rating && (
-                        <span className="text-[10px] text-amber-400 flex items-center gap-0.5">
-                          <Star className="w-3 h-3 fill-amber-400" />
+                        <span className="text-[#8C6A29] font-bold flex items-center gap-0.5">
+                          <Star className="w-3 h-3 fill-[#C9A45C] text-[#C9A45C]" />
                           {trip.rating}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Amount */}
                   <div className="text-right shrink-0">
-                    {(trip.fare || trip.totalAmount) ? (
-                      <p className="text-sm font-bold text-white">₹{(trip.fare || trip.totalAmount || 0).toFixed(0)}</p>
+                    {trip.fare ? (
+                      <p className="text-sm font-black text-[#0B1728] dark:text-white">₹{trip.fare.toFixed(0)}</p>
                     ) : null}
-                    <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors ml-auto mt-1" />
+                    <ChevronRight className="w-4 h-4 text-[#8995A5] group-hover:text-[#0B1728] transition-colors ml-auto mt-1" />
                   </div>
                 </div>
               );
