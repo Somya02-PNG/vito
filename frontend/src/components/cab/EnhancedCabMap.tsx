@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// ─── Custom DivIcons with Sleek Dark Theme Styling ───────────────────────────
+// ─── Custom DivIcons with Locked VITO Styling ───────────────────────────────
 const createBadgeIcon = (text: string, bgColor: string, borderColor: string = '#ffffff') => {
   return new L.DivIcon({
     className: 'custom-map-badge',
@@ -15,7 +15,7 @@ const createBadgeIcon = (text: string, bgColor: string, borderColor: string = '#
       height: 32px;
       border-radius: 50%;
       border: 3px solid ${borderColor};
-      box-shadow: 0 0 20px ${bgColor}90, 0 4px 12px rgba(0,0,0,0.6);
+      box-shadow: 0 4px 14px rgba(7, 17, 31, 0.25);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -29,66 +29,102 @@ const createBadgeIcon = (text: string, bgColor: string, borderColor: string = '#
   });
 };
 
-const pickupIcon = createBadgeIcon('A', '#10B981');
-const dropIcon = createBadgeIcon('B', '#EF4444');
-const stop1Icon = createBadgeIcon('1', '#F59E0B');
-const stop2Icon = createBadgeIcon('2', '#F59E0B');
+const pickupIcon = createBadgeIcon('A', '#16A67A'); // --vito-success
+const dropIcon = createBadgeIcon('B', '#E5484D');   // --vito-danger
+const stop1Icon = createBadgeIcon('1', '#F4A340');  // --vito-warning
+const stop2Icon = createBadgeIcon('2', '#F4A340');  // --vito-warning
 
 const driverIcon = new L.DivIcon({
   className: 'custom-driver-marker',
   html: `<div style="
-    background: #0F172A;
-    width: 38px;
-    height: 38px;
+    background: #07111F;
+    width: 36px;
+    height: 36px;
     border-radius: 12px;
-    border: 2px solid #3B82F6;
-    box-shadow: 0 0 16px rgba(59, 130, 246, 0.4), 0 4px 10px rgba(0,0,0,0.5);
+    border: 2px solid #00C2B3;
+    box-shadow: 0 4px 14px rgba(0, 194, 179, 0.35);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: 18px;
     cursor: pointer;
-  ">🚕</div>`,
-  iconSize: [38, 38],
-  iconAnchor: [19, 19],
+  ">🚗</div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
 });
 
-const selectedDriverIcon = new L.DivIcon({
-  className: 'custom-selected-driver-marker',
-  html: `<div style="
-    background: #1E3A8A;
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    border: 3px solid #38BDF8;
-    box-shadow: 0 0 24px rgba(56, 189, 248, 0.8), 0 4px 14px rgba(0,0,0,0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    animation: pulse 1.5s infinite;
-  ">🚕</div>`,
-  iconSize: [44, 44],
-  iconAnchor: [22, 22],
-});
+const selectedDriverIcon = (etaText: string = '2 min') =>
+  new L.DivIcon({
+    className: 'custom-selected-driver-marker',
+    html: `<div style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    ">
+      <div style="
+        background: #07111F;
+        color: #00C2B3;
+        font-weight: 800;
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        border: 1px solid #00C2B3;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        white-space: nowrap;
+      ">🚗 ${etaText}</div>
+      <div style="
+        background: #07111F;
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        border: 3px solid #00C2B3;
+        box-shadow: 0 0 20px rgba(0, 194, 179, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+      ">🚘</div>
+    </div>`,
+    iconSize: [60, 64],
+    iconAnchor: [30, 48],
+  });
 
-const movingVehicleIcon = new L.DivIcon({
-  className: 'custom-moving-car-marker',
-  html: `<div style="
-    background: linear-gradient(135deg, #2563EB, #06B6D4);
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 3.5px solid #FFFFFF;
-    box-shadow: 0 0 30px rgba(6, 182, 212, 0.9), 0 8px 24px rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-  ">🚘</div>`,
-  iconSize: [48, 48],
-  iconAnchor: [24, 24],
-});
+const movingVehicleIcon = (etaText: string = 'Live') =>
+  new L.DivIcon({
+    className: 'custom-moving-car-marker',
+    html: `<div style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    ">
+      <div style="
+        background: #07111F;
+        color: #FFFFFF;
+        font-weight: 800;
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        border: 1px solid #00C2B3;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      ">🚗 ${etaText}</div>
+      <div style="
+        background: #07111F;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 3.5px solid #00C2B3;
+        box-shadow: 0 0 24px rgba(0, 194, 179, 0.8), 0 8px 20px rgba(7, 17, 31, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+      ">🚘</div>
+    </div>`,
+    iconSize: [60, 68],
+    iconAnchor: [30, 52],
+  });
 
 // ─── Auto-fit Map View Controller ───────────────────────────────────────────
 function MapViewManager({
@@ -104,47 +140,55 @@ function MapViewManager({
 
   useEffect(() => {
     if (bounds) {
-      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
+      try {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      } catch {}
     } else if (center) {
-      map.setView(center, zoom || 14, { animate: true });
+      map.flyTo(center, zoom || 14, { duration: 1.2 });
     }
-  }, [center, bounds, zoom, map]);
+  }, [map, bounds, center, zoom]);
 
   return null;
 }
 
-// ─── Component Props ────────────────────────────────────────────────────────
-export interface LocationMarker {
-  address: string;
+// ─── EnhancedCabMap Component Props ─────────────────────────────────────────
+interface LocationCoord {
   lat: number;
   lng: number;
+  address?: string;
 }
 
-export interface DriverMarkerItem {
+interface NearbyDriverCoord {
   id: string;
-  name: string;
-  vehicleModel: string;
-  vehicleNo: string;
-  rating: number;
-  eta: string;
   lat: number;
   lng: number;
-  category?: string;
-  phone?: string;
+  name: string;
+  vehicleModel?: string;
+  rating?: number;
+  eta?: string;
 }
 
 interface EnhancedCabMapProps {
-  center: [number, number];
-  pickup?: LocationMarker | null;
-  drop?: LocationMarker | null;
-  stops?: LocationMarker[];
-  drivers?: DriverMarkerItem[];
+  center?: [number, number];
+  pickup?: LocationCoord | null;
+  drop?: LocationCoord | null;
+  stops?: LocationCoord[];
+  nearbyDrivers?: NearbyDriverCoord[];
+  drivers?: any[];
+  selectedDriver?: NearbyDriverCoord | null;
   selectedDriverId?: string | null;
-  onSelectDriver?: (id: string) => void;
-  routePoints?: [number, number][] | null;
+  movingVehiclePos?: [number, number] | null;
   currentCarPos?: [number, number] | null;
+  routePolyline?: [number, number][];
+  routePoints?: [number, number][] | null;
   isMoving?: boolean;
   statusLabel?: string;
+  activeStep?: string;
+  liveEtaText?: string;
+  speedKmh?: number;
+  distanceRemainingKm?: number;
+  timeRemainingMin?: number;
+  className?: string;
 }
 
 export default function EnhancedCabMap({
@@ -152,162 +196,228 @@ export default function EnhancedCabMap({
   pickup,
   drop,
   stops = [],
+  nearbyDrivers = [],
   drivers = [],
+  selectedDriver,
   selectedDriverId,
-  onSelectDriver,
-  routePoints,
+  movingVehiclePos,
   currentCarPos,
-  isMoving = false,
+  routePolyline = [],
+  routePoints,
+  isMoving,
   statusLabel,
+  activeStep = 'RIDE_ENTRY',
+  liveEtaText = '2 min',
+  speedKmh = 38,
+  distanceRemainingKm,
+  timeRemainingMin,
+  className = '',
 }: EnhancedCabMapProps) {
-  // Compute bounds when coordinates exist
-  const bounds = useMemo(() => {
-    const latLngs: [number, number][] = [];
+  // Default Center (New Delhi City Center)
+  const defaultCenter: [number, number] = [28.6315, 77.2167];
 
-    if (currentCarPos) {
-      latLngs.push(currentCarPos);
-    }
-    if (pickup?.lat && pickup?.lng) {
-      latLngs.push([pickup.lat, pickup.lng]);
-    }
-    if (stops && stops.length > 0) {
-      stops.forEach((s) => {
-        if (s.lat && s.lng) latLngs.push([s.lat, s.lng]);
-      });
-    }
-    if (drop?.lat && drop?.lng) {
-      latLngs.push([drop.lat, drop.lng]);
-    }
+  const resolvedNearby = nearbyDrivers.length > 0 ? nearbyDrivers : (drivers as any[]) || [];
+  const resolvedMovingPos = movingVehiclePos || currentCarPos;
+  const resolvedPolyline = routePolyline.length > 0 ? routePolyline : routePoints || [];
 
-    if (latLngs.length >= 2) {
-      return L.latLngBounds(latLngs);
+  const mapCenter: [number, number] = useMemo(() => {
+    if (resolvedMovingPos) return resolvedMovingPos;
+    if (selectedDriver) return [selectedDriver.lat, selectedDriver.lng];
+    if (pickup) return [pickup.lat, pickup.lng];
+    if (center) return center;
+    return defaultCenter;
+  }, [resolvedMovingPos, selectedDriver, pickup, center]);
+
+  const mapBounds = useMemo(() => {
+    const points: [number, number][] = [];
+    if (pickup) points.push([pickup.lat, pickup.lng]);
+    if (drop) points.push([drop.lat, drop.lng]);
+    stops.forEach((s) => points.push([s.lat, s.lng]));
+    if (resolvedMovingPos) points.push(resolvedMovingPos);
+    if (selectedDriver) points.push([selectedDriver.lat, selectedDriver.lng]);
+
+    if (points.length >= 2) {
+      return L.latLngBounds(points);
     }
     return undefined;
-  }, [pickup, drop, stops, currentCarPos]);
+  }, [pickup, drop, stops, resolvedMovingPos, selectedDriver]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden select-none bg-[#07090E]">
+    <div className={`relative w-full h-full min-h-[480px] rounded-3xl overflow-hidden border border-[#E5EAF0] dark:border-[#17334F] shadow-[0_8px_30px_rgba(7,17,31,0.06)] bg-[#F7F9FC] ${className}`}>
       <MapContainer
-        center={center}
-        zoom={13}
+        center={mapCenter}
+        zoom={14}
         scrollWheelZoom={true}
-        className="w-full h-full z-0"
-        style={{ background: '#06090E' }}
+        style={{ width: '100%', height: '100%', minHeight: '480px', zIndex: 1 }}
       >
-        <MapViewManager center={center} bounds={bounds} />
-
-        {/* CartoDB High-Contrast Dark Tiles */}
+        {/* Soft-Light / Carto Voyager Map Tiles */}
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          maxZoom={19}
         />
 
-        {/* Pickup Marker (A) */}
-        {pickup?.lat && pickup?.lng && (
+        <MapViewManager center={mapCenter} bounds={mapBounds} zoom={14} />
+
+        {/* Pickup Marker */}
+        {pickup && (
           <Marker position={[pickup.lat, pickup.lng]} icon={pickupIcon}>
-            <Popup className="vito-map-popup">
+            <Popup className="custom-vito-popup">
               <div className="p-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 block">
-                  Pickup Location (A)
+                <span className="text-[10px] font-bold text-[#16A67A] uppercase tracking-wider block">
+                  Pickup Location
                 </span>
-                <p className="text-xs font-bold text-slate-900 mt-0.5">{pickup.address}</p>
+                <p className="text-xs font-bold text-[#0B1728] mt-0.5">
+                  {pickup.address || 'Current Location'}
+                </p>
               </div>
             </Popup>
           </Marker>
         )}
 
-        {/* Additional Stops (1, 2) */}
-        {stops.map((stop, idx) => {
-          if (!stop.lat || !stop.lng) return null;
-          const stopIcon = idx === 0 ? stop1Icon : stop2Icon;
-          return (
-            <Marker key={idx} position={[stop.lat, stop.lng]} icon={stopIcon}>
-              <Popup className="vito-map-popup">
-                <div className="p-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 block">
-                    Stop {idx + 1}
-                  </span>
-                  <p className="text-xs font-bold text-slate-900 mt-0.5">{stop.address}</p>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-
-        {/* Drop Marker (B) */}
-        {drop?.lat && drop?.lng && (
-          <Marker position={[drop.lat, drop.lng]} icon={dropIcon}>
-            <Popup className="vito-map-popup">
+        {/* Multi-Stop Markers */}
+        {stops.map((stop, i) => (
+          <Marker
+            key={i}
+            position={[stop.lat, stop.lng]}
+            icon={i === 0 ? stop1Icon : stop2Icon}
+          >
+            <Popup className="custom-vito-popup">
               <div className="p-1">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 block">
-                  Destination (B)
+                <span className="text-[10px] font-bold text-[#F4A340] uppercase tracking-wider block">
+                  Stop {i + 1}
                 </span>
-                <p className="text-xs font-bold text-slate-900 mt-0.5">{drop.address}</p>
+                <p className="text-xs font-bold text-[#0B1728] mt-0.5">
+                  {stop.address}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+        {/* Drop Marker */}
+        {drop && (
+          <Marker position={[drop.lat, drop.lng]} icon={dropIcon}>
+            <Popup className="custom-vito-popup">
+              <div className="p-1">
+                <span className="text-[10px] font-bold text-[#E5484D] uppercase tracking-wider block">
+                  Destination
+                </span>
+                <p className="text-xs font-bold text-[#0B1728] mt-0.5">
+                  {drop.address}
+                </p>
               </div>
             </Popup>
           </Marker>
         )}
 
         {/* Nearby Drivers */}
-        {!isMoving &&
-          drivers.map((driver) => {
-            const isSelected = selectedDriverId === driver.id;
-            return (
-              <Marker
-                key={driver.id}
-                position={[driver.lat, driver.lng]}
-                icon={isSelected ? selectedDriverIcon : driverIcon}
-                eventHandlers={{
-                  click: () => onSelectDriver?.(driver.id),
-                }}
-              >
-                <Popup className="vito-map-popup">
-                  <div className="p-2 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-extrabold text-blue-600">{driver.name}</span>
-                      <span className="text-[10px] font-bold text-amber-600">★ {driver.rating.toFixed(1)}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 font-semibold">{driver.vehicleModel} · {driver.vehicleNo}</p>
-                    <p className="text-[10px] text-emerald-600 font-bold">{driver.eta} away</p>
+        {!selectedDriver &&
+          !movingVehiclePos &&
+          nearbyDrivers.map((driver) => (
+            <Marker
+              key={driver.id}
+              position={[driver.lat, driver.lng]}
+              icon={driverIcon}
+            >
+              <Popup className="custom-vito-popup">
+                <div className="p-1 space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-[#0B1728]">{driver.name}</span>
+                    <span className="text-[10px] text-[#C9A45C] font-bold">⭐ {driver.rating || 4.9}</span>
                   </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+                  <p className="text-[11px] text-[#526174]">
+                    {driver.vehicleModel || 'Sedan'} · {driver.eta || '3 min away'}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
 
-        {/* Route Line */}
-        {routePoints && routePoints.length > 1 && (
-          <Polyline
-            positions={routePoints}
-            pathOptions={{
-              color: '#3B82F6',
-              weight: 5,
-              opacity: 0.85,
-              lineCap: 'round',
-              lineJoin: 'round',
-            }}
-          />
-        )}
-
-        {/* Moving Active Car */}
-        {isMoving && currentCarPos && (
-          <Marker position={currentCarPos} icon={movingVehicleIcon}>
-            <Popup className="vito-map-popup">
-              <div className="p-1 text-center">
-                <span className="text-[10px] font-extrabold text-cyan-600 uppercase tracking-wider block">
-                  {statusLabel || 'Vehicle in Motion'}
+        {/* Selected Driver En Route Marker */}
+        {selectedDriver && !movingVehiclePos && (
+          <Marker
+            position={[selectedDriver.lat, selectedDriver.lng]}
+            icon={selectedDriverIcon(liveEtaText)}
+          >
+            <Popup className="custom-vito-popup">
+              <div className="p-1">
+                <span className="text-[10px] font-bold text-[#00A99D] uppercase tracking-wider block">
+                  Assigned Driver
                 </span>
+                <p className="text-xs font-bold text-[#0B1728] mt-0.5">{selectedDriver.name}</p>
+                <p className="text-[11px] text-[#526174]">{selectedDriver.vehicleModel}</p>
               </div>
             </Popup>
           </Marker>
         )}
+
+        {/* Moving Active Trip Vehicle */}
+        {movingVehiclePos && (
+          <Marker position={movingVehiclePos} icon={movingVehicleIcon(liveEtaText)}>
+            <Popup className="custom-vito-popup">
+              <div className="p-1">
+                <span className="text-[10px] font-bold text-[#00A99D] uppercase tracking-wider block">
+                  Active Ride
+                </span>
+                <p className="text-xs font-bold text-[#0B1728] mt-0.5">Speed: {speedKmh} km/h</p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* Route Polyline (Teal VITO Route Line) */}
+        {routePolyline.length > 0 && (
+          <>
+            <Polyline
+              positions={routePolyline}
+              pathOptions={{
+                color: '#00C2B3',
+                weight: 5,
+                opacity: 0.9,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+            <Polyline
+              positions={routePolyline}
+              pathOptions={{
+                color: '#07111F',
+                weight: 8,
+                opacity: 0.15,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+          </>
+        )}
       </MapContainer>
 
-      {/* Floating Status Pill */}
-      {statusLabel && (
-        <div className="absolute top-4 left-4 z-20 px-3.5 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 text-xs font-bold text-white shadow-xl flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          <span>{statusLabel}</span>
+      {/* Floating Minimal Glass Controls */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <div className="px-3 py-1.5 rounded-full vito-glass text-xs font-bold text-[#0B1728] dark:text-white shadow-sm flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-[#16A67A] animate-pulse" />
+          <span>GPS Active</span>
+        </div>
+      </div>
+
+      {/* Active Trip Telemetry Pill Overlay */}
+      {activeStep === 'ACTIVE_TRIP' && (
+        <div className="absolute bottom-4 left-4 right-4 z-10 p-3.5 rounded-2xl vito-glass text-[#0B1728] dark:text-white shadow-lg flex items-center justify-around gap-2 text-center border border-[#00C2B3]/30">
+          <div>
+            <span className="text-[10px] font-bold uppercase text-[#8995A5] block">Speed</span>
+            <span className="text-sm font-black text-[#0B1728] dark:text-white">{speedKmh} km/h</span>
+          </div>
+          <div className="h-6 w-px bg-[#E5EAF0] dark:bg-[#17334F]" />
+          <div>
+            <span className="text-[10px] font-bold uppercase text-[#8995A5] block">Distance Left</span>
+            <span className="text-sm font-black text-[#00A99D]">{distanceRemainingKm ?? 8.4} km</span>
+          </div>
+          <div className="h-6 w-px bg-[#E5EAF0] dark:bg-[#17334F]" />
+          <div>
+            <span className="text-[10px] font-bold uppercase text-[#8995A5] block">ETA</span>
+            <span className="text-sm font-black text-[#16A67A]">{timeRemainingMin ?? 18} mins</span>
+          </div>
         </div>
       )}
     </div>

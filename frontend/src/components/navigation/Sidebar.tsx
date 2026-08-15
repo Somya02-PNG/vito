@@ -10,11 +10,11 @@ import {
   Zap,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
-  LogOut,
+  ShieldCheck,
+  Shield,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -64,7 +64,12 @@ export default function Sidebar({
 
   const isLinkActive = (href: string) => {
     const basePath = href.split('?')[0];
-    if (basePath === '/customer/home' || basePath === '/driver/home' || basePath === '/partner/dashboard' || basePath === '/admin/dashboard') {
+    if (
+      basePath === '/customer/home' ||
+      basePath === '/driver/home' ||
+      basePath === '/partner/dashboard' ||
+      basePath === '/admin/dashboard'
+    ) {
       return pathname === basePath;
     }
     return pathname === basePath || pathname.startsWith(basePath + '/');
@@ -72,26 +77,20 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`relative flex flex-col h-full bg-[#080C16] border-r border-white/[0.08] text-slate-200 select-none transition-all duration-300 ${
-        isMobileDrawer
-          ? 'w-72'
-          : isCollapsed
-          ? 'w-20'
-          : 'w-64 md:w-72'
+      className={`relative flex flex-col h-full bg-[#07111F] border-r border-[#17334F]/40 text-slate-200 select-none transition-all duration-300 ${
+        isMobileDrawer ? 'w-72' : isCollapsed ? 'w-20' : 'w-64 md:w-72'
       }`}
     >
       {/* Brand Header */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-white/[0.06] shrink-0">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-[#17334F]/30 shrink-0">
         <Link
           href={config.groups[0]?.items[0]?.href || '/'}
           onClick={onCloseMobileDrawer}
           className="flex items-center gap-3 group overflow-hidden"
         >
-          <div
-            className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${theme.avatarGradient} p-[1.5px] shadow-lg ${theme.glow} group-hover:scale-105 transition-transform shrink-0`}
-          >
-            <div className="w-full h-full bg-[#090D18] rounded-[9.5px] flex items-center justify-center">
-              <Zap className={`w-4 h-4 ${theme.activeIcon} fill-current`} />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#00C2B3] to-[#00A99D] p-[1.5px] shadow-lg shadow-[#00C2B3]/25 group-hover:scale-105 transition-transform shrink-0">
+            <div className="w-full h-full bg-[#07111F] rounded-[9.5px] flex items-center justify-center">
+              <Zap className="w-4 h-4 text-[#00C2B3] fill-[#00C2B3]" />
             </div>
           </div>
 
@@ -99,9 +98,7 @@ export default function Sidebar({
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black tracking-tight text-white">VITO</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${theme.badgeBg} ${theme.badgeBorder} ${theme.badgeText} border`}
-                >
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-[#00C2B3]/10 border border-[#00C2B3]/30 text-[#00C2B3]">
                   {config.badgeText}
                 </span>
               </div>
@@ -132,7 +129,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar">
         {config.groups.map((group, groupIdx) => (
           <div key={group.id} className="space-y-1">
-            {groupIdx > 0 && <div className="my-3 border-t border-white/[0.06]" />}
+            {groupIdx > 0 && <div className="my-3 border-t border-[#17334F]/30" />}
             {group.title && (!isCollapsed || isMobileDrawer) && (
               <h4 className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                 {group.title}
@@ -142,7 +139,9 @@ export default function Sidebar({
             {group.items.map((item) => {
               const Icon = item.icon;
               const hasSubItems = item.subItems && item.subItems.length > 0;
-              const isActive = isLinkActive(item.href) || (hasSubItems && item.subItems?.some(s => isLinkActive(s.href)));
+              const isActive =
+                isLinkActive(item.href) ||
+                (hasSubItems && item.subItems?.some((s) => isLinkActive(s.href)));
               const isOpen = openAccordions[item.label];
 
               if (hasSubItems) {
@@ -157,29 +156,41 @@ export default function Sidebar({
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                         isActive
-                          ? `${theme.activeBg} ${theme.activeText} border ${theme.activeBorder}`
-                          : `text-slate-400 ${theme.hoverBg}`
+                          ? 'bg-[#00C2B3] text-white font-bold shadow-[0_0_16px_rgba(0,194,179,0.35)]'
+                          : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
                       }`}
+                      title={isCollapsed && !isMobileDrawer ? item.label : undefined}
                     >
-                      <div className="flex items-center gap-3 shrink-0">
-                        <Icon className={`w-4.5 h-4.5 ${isActive ? theme.activeIcon : 'text-slate-400'}`} />
-                        {(!isCollapsed || isMobileDrawer) && <span>{item.label}</span>}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon
+                          className={`w-4 h-4 shrink-0 ${
+                            isActive ? 'text-white' : 'text-slate-400'
+                          }`}
+                        />
+                        {(!isCollapsed || isMobileDrawer) && (
+                          <span className="truncate">{item.label}</span>
+                        )}
                       </div>
 
                       {(!isCollapsed || isMobileDrawer) && (
-                        <div className="text-slate-500">
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.badge && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/20 text-white">
+                              {item.badge}
+                            </span>
+                          )}
                           {isOpen ? (
-                            <ChevronDown className="w-3.5 h-3.5" />
+                            <ChevronDown className="w-3.5 h-3.5 opacity-70" />
                           ) : (
-                            <ChevronRight className="w-3.5 h-3.5" />
+                            <ChevronRight className="w-3.5 h-3.5 opacity-70" />
                           )}
                         </div>
                       )}
                     </button>
 
-                    {/* Sub-items accordion container */}
+                    {/* Accordion Children */}
                     {isOpen && (!isCollapsed || isMobileDrawer) && (
-                      <div className="pl-9 pr-1 py-1 space-y-1 border-l border-white/[0.08] ml-5">
+                      <div className="pl-9 pr-1 py-1 space-y-1 animate-fadeIn">
                         {item.subItems?.map((sub) => {
                           const isSubActive = isLinkActive(sub.href);
                           return (
@@ -187,13 +198,18 @@ export default function Sidebar({
                               key={sub.href}
                               href={sub.href}
                               onClick={onCloseMobileDrawer}
-                              className={`block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                                 isSubActive
-                                  ? `${theme.activeText} font-semibold bg-white/[0.06]`
-                                  : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.03]'
+                                  ? 'text-[#00C2B3] font-bold bg-[#00C2B3]/10'
+                                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                               }`}
                             >
-                              {sub.label}
+                              <span className="truncate">{sub.label}</span>
+                              {sub.badge && (
+                                <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-[#00C2B3]/20 text-[#00C2B3]">
+                                  {sub.badge}
+                                </span>
+                              )}
                             </Link>
                           );
                         })}
@@ -211,19 +227,19 @@ export default function Sidebar({
                   onClick={onCloseMobileDrawer}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                     item.isAiAssistant
-                      ? 'bg-gradient-to-r from-indigo-500/15 via-purple-500/15 to-pink-500/15 text-purple-300 border border-purple-500/30 hover:border-purple-400/50 shadow-sm'
+                      ? 'bg-gradient-to-r from-[#00C2B3]/20 to-[#7567E8]/20 text-white border border-[#00C2B3]/30 hover:border-[#00C2B3]/60 shadow-[0_0_12px_rgba(0,194,179,0.25)]'
                       : isActive
-                      ? `${theme.activeBg} ${theme.activeText} border ${theme.activeBorder} shadow-sm`
-                      : `text-slate-400 ${theme.hoverBg}`
+                      ? 'bg-[#00C2B3] text-white font-bold shadow-[0_0_16px_rgba(0,194,179,0.35)]'
+                      : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
                   }`}
                   title={isCollapsed && !isMobileDrawer ? item.label : undefined}
                 >
                   <Icon
-                    className={`w-4.5 h-4.5 shrink-0 ${
+                    className={`w-4 h-4 shrink-0 ${
                       item.isAiAssistant
-                        ? 'text-purple-400 animate-pulse'
+                        ? 'text-[#00C2B3] animate-pulse'
                         : isActive
-                        ? theme.activeIcon
+                        ? 'text-white'
                         : 'text-slate-400'
                     }`}
                   />
@@ -232,7 +248,7 @@ export default function Sidebar({
                     <div className="flex items-center justify-between w-full min-w-0">
                       <span className="truncate">{item.label}</span>
                       {item.badge && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/10 text-white">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/15 text-white">
                           {item.badge}
                         </span>
                       )}
@@ -243,46 +259,40 @@ export default function Sidebar({
             })}
           </div>
         ))}
+
+        {/* VITO Safety Reassurance Card */}
+        {(!isCollapsed || isMobileDrawer) && (
+          <div className="p-3 rounded-2xl bg-[#10243A]/60 border border-[#17334F]/40 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#16A67A]" />
+              <span className="text-xs font-bold text-white">VITO Safety Active</span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              24/7 real-time ride monitoring & verified emergency response.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Footer Area: AI Assistant persistent trigger + Profile + Settings/Logout */}
-      <div className="p-3 border-t border-white/[0.08] bg-[#060912]/80 space-y-2 shrink-0">
-        {/* Footer actions like persistent AI Assistant / Settings */}
-        {config.footerItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = isLinkActive(item.href);
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onCloseMobileDrawer}
-              className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
-                item.isAiAssistant
-                  ? 'bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-blue-600/20 text-purple-200 border border-purple-500/30 hover:border-purple-400 shadow-md'
-                  : isActive
-                  ? `${theme.activeBg} ${theme.activeText} border ${theme.activeBorder}`
-                  : `text-slate-400 ${theme.hoverBg}`
-              }`}
-              title={isCollapsed && !isMobileDrawer ? item.label : undefined}
-            >
-              <Icon
-                className={`w-4 h-4 shrink-0 ${
-                  item.isAiAssistant ? 'text-pink-400 animate-pulse' : 'text-slate-400'
-                }`}
-              />
-              {(!isCollapsed || isMobileDrawer) && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+      {/* Footer Area: AI Assistant Trigger + Profile + Logout */}
+      <div className="p-3 border-t border-[#17334F]/30 bg-[#0B1728]/80 space-y-2 shrink-0">
+        {/* Persistent Ask VITO AI Button */}
+        <button
+          onClick={() => {
+            const aiBtn = document.getElementById('vito-ai-floating-trigger');
+            aiBtn?.click();
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#00C2B3]/20 via-[#7567E8]/20 to-[#00C2B3]/20 text-white border border-[#00C2B3]/30 hover:border-[#00C2B3]/60 shadow-sm transition-all"
+        >
+          <Sparkles className="w-4 h-4 text-[#00C2B3] shrink-0 animate-pulse" />
+          {(!isCollapsed || isMobileDrawer) && <span>✦ Ask VITO AI</span>}
+        </button>
 
         {/* User Profile Summary Section */}
         {user && (
-          <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2">
+          <div className="pt-2 border-t border-[#17334F]/30 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className={`w-8 h-8 rounded-full bg-gradient-to-tr ${theme.avatarGradient} flex items-center justify-center text-xs font-black text-white uppercase shadow-md shrink-0`}
-              >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00C2B3] to-[#00A99D] flex items-center justify-center text-xs font-black text-white uppercase shadow-md shrink-0">
                 {user.name.charAt(0)}
               </div>
 
@@ -291,7 +301,7 @@ export default function Sidebar({
                   <p className="text-xs font-bold text-white leading-tight truncate">
                     {user.name}
                   </p>
-                  <p className={`text-[10px] ${theme.badgeText} capitalize font-medium truncate`}>
+                  <p className="text-[10px] text-[#00C2B3] capitalize font-medium truncate">
                     {user.role}
                   </p>
                 </div>

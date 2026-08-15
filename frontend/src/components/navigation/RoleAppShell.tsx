@@ -18,7 +18,7 @@ export default function RoleAppShell({ role, children }: RoleAppShellProps) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#06090E] text-slate-100 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#F7F9FC] dark:bg-[#050B14] text-[#0B1728] dark:text-[#F7FAFC] flex flex-col md:flex-row transition-colors">
       {/* Desktop & Tablet Sidebar */}
       <div className="hidden md:block shrink-0">
         <Sidebar

@@ -1,0 +1,88 @@
+:root {
+  /* Midnight Navy Scale */
+  --vito-navy-950: #07111F;
+  --vito-navy-900: #0B1728;
+  --vito-navy-800: #10243A;
+  --vito-navy-700: #17334F;
+  --vito-navy-600: #1F4264;
+
+  /* VITO Teal Scale */
+  --vito-teal-600: #00A99D;
+  --vito-teal-500: #00C2B3;
+  --vito-teal-400: #29D6C7;
+  --vito-teal-300: #72E7DD;
+  --vito-teal-100: #E6FAF8;
+  --vito-teal-50:  #F0FCFB;
+
+  /* Surfaces & Backgrounds */
+  --vito-bg: #F7F9FC;
+  --vito-surface: #FFFFFF;
+  --vito-surface-soft: #F1F5F8;
+  --vito-surface-card: #FFFFFF;
+  --vito-surface-elevated: #FFFFFF;
+
+  /* Typography Colors */
+  --vito-text: #0B1728;
+  --vito-text-secondary: #526174;
+  --vito-text-muted: #8995A5;
+  --vito-text-inverse: #FFFFFF;
+
+  /* Borders & Dividers */
+  --vito-border: #E5EAF0;
+  --vito-border-soft: #EEF2F6;
+  --vito-border-focus: #00C2B3;
+
+  /* Semantic Colors */
+  --vito-success: #16A67A;
+  --vito-success-soft: #E8F7F2;
+  --vito-warning: #F4A340;
+  --vito-warning-soft: #FEF6EB;
+  --vito-danger: #E5484D;
+  --vito-danger-soft: #FDE8E9;
+  --vito-info: #3984E8;
+  --vito-info-soft: #EDF4FD;
+
+  /* Premium Gold Accents */
+  --vito-gold: #C9A45C;
+  --vito-gold-soft: #F5EBD5;
+
+  /* AI Exclusive Gradient */
+  --vito-ai-gradient: linear-gradient(135deg, #00C2B3 0%, #7567E8 100%);
+  --vito-ai-glow: 0 0 24px rgba(0, 194, 179, 0.35);
+
+  /* Shadows (Subtle, Light-only) */
+  --vito-shadow-sm: 0 2px 8px rgba(7, 17, 31, 0.04);
+  --vito-shadow: 0 4px 20px rgba(7, 17, 31, 0.06);
+  --vito-shadow-hover: 0 8px 28px rgba(7, 17, 31, 0.10);
+  --vito-shadow-lg: 0 12px 36px rgba(7, 17, 31, 0.12);
+
+  /* Border Radii */
+  --vito-radius-card: 16px;
+  --vito-radius-md: 12px;
+  --vito-radius-sm: 10px;
+  --vito-radius-pill: 9999px;
+
+  /* Standard Component Heights */
+  --vito-btn-height: 48px;
+}
+
+/* Dark Mode Tokens (Secondary Support) */
+.dark {
+  --vito-bg: #050B14;
+  --vito-surface: #0B1728;
+  --vito-surface-soft: #10243A;
+  --vito-surface-card: #0B1728;
+  --vito-surface-elevated: #10243A;
+
+  --vito-text: #F7FAFC;
+  --vito-text-secondary: #94A3B8;
+  --vito-text-muted: #64748B;
+  --vito-text-inverse: #0B1728;
+
+  --vito-border: #17334F;
+  --vito-border-soft: #10243A;
+
+  --vito-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --vito-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --vito-shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
