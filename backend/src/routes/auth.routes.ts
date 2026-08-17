@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   signup,
   login,
+  demoLogin,
   getMe,
   logout,
   updateProfile,
@@ -15,6 +16,7 @@ const router = Router();
 // ─── Public routes ────────────────────────────────────────────────────────────
 router.post('/auth/signup', signup);
 router.post('/auth/login', login);
+router.post('/auth/demo-login', demoLogin);
 router.post('/auth/forgot-password', forgotPassword);
 router.post('/auth/reset-password', resetPassword);
 

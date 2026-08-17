@@ -350,6 +350,48 @@ export function AdminDashboardView({ defaultTab = 'OVERVIEW' }: { defaultTab?: A
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const handleVerifyDriverAction = async (driverId: string, status: 'verified' | 'rejected' | 'suspended' | 'pending') => {
+    try {
+      await fetchAPI(`/api/admin/drivers/${driverId}/verify`, {
+        method: 'PATCH',
+        body: { status },
+      });
+      setAlertMsg({ type: 'success', text: `Driver application successfully updated to ${status.toUpperCase()}!` });
+      loadTabData();
+      loadAdminStats();
+    } catch (err: any) {
+      setAlertMsg({ type: 'error', text: err?.message || 'Failed to update driver status' });
+    }
+  };
+
+  const handleVerifyPartnerAction = async (partnerId: string, status: 'verified' | 'rejected' | 'suspended' | 'pending') => {
+    try {
+      await fetchAPI(`/api/admin/partners/${partnerId}/verify`, {
+        method: 'PATCH',
+        body: { status },
+      });
+      setAlertMsg({ type: 'success', text: `Partner application successfully updated to ${status.toUpperCase()}!` });
+      loadTabData();
+      loadAdminStats();
+    } catch (err: any) {
+      setAlertMsg({ type: 'error', text: err?.message || 'Failed to update partner status' });
+    }
+  };
+
+  const handleUpdateUserStatusAction = async (userId: string, status: string) => {
+    try {
+      await fetchAPI(`/api/admin/users/${userId}/status`, {
+        method: 'PATCH',
+        body: { status },
+      });
+      setAlertMsg({ type: 'success', text: `User account status updated to ${status.toUpperCase()}!` });
+      loadTabData();
+      loadAdminStats();
+    } catch (err: any) {
+      setAlertMsg({ type: 'error', text: err?.message || 'Failed to update user status' });
+    }
+  };
+
   return (
     <div className="relative overflow-hidden min-h-screen pb-16 bg-[#07090E]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 pt-6">
@@ -388,6 +430,7 @@ export function AdminDashboardView({ defaultTab = 'OVERVIEW' }: { defaultTab?: A
           </div>
         )}
 
+        {/* Tab Navigation */}
         <div className="flex items-center gap-1.5 mb-6 border-b border-white/[0.08] pb-3 overflow-x-auto scrollbar-hide">
           {[
             { id: 'OVERVIEW', label: 'Overview', icon: BarChart3 },
@@ -418,23 +461,211 @@ export function AdminDashboardView({ defaultTab = 'OVERVIEW' }: { defaultTab?: A
           })}
         </div>
 
+        {/* ── Tab Content: OVERVIEW ── */}
         {activeTab === 'OVERVIEW' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Total Users</span>
-              <span className="text-xl font-extrabold text-white">{stats?.users?.totalUsers ?? '—'}</span>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Total Users</span>
+                <span className="text-xl font-extrabold text-white">{stats?.users?.totalUsers ?? '—'}</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Active Drivers</span>
+                <span className="text-xl font-extrabold text-cyan-400">{stats?.drivers?.verifiedDrivers ?? '—'}</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
+                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Pending Approvals</span>
+                <span className="text-xl font-extrabold text-amber-400">{(stats?.drivers?.pendingVerification ?? 0) + (stats?.partners?.pendingPartners ?? 0)}</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-violet-600/10 border border-violet-500/20">
+                <span className="text-[10px] font-semibold text-violet-300 uppercase tracking-wider block mb-1">Platform Commission</span>
+                <span className="text-xl font-extrabold text-violet-300">₹{(stats?.financial?.platformCommission ?? 0).toLocaleString('en-IN')}</span>
+              </div>
             </div>
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Active Drivers</span>
-              <span className="text-xl font-extrabold text-cyan-400">{stats?.drivers?.verifiedDrivers ?? '—'}</span>
+
+            {/* Activity Feed */}
+            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Recent Platform Activity</h3>
+              <div className="space-y-2">
+                {activities.slice(0, 5).map((act, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] text-xs">
+                    <span className="text-white font-medium">{act.userName} — {act.eventType} ({act.entity})</span>
+                    <span className="text-slate-500 text-[10px]">{new Date(act.timestamp).toLocaleTimeString()}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Fleet Vehicles</span>
-              <span className="text-xl font-extrabold text-white">{stats?.vehicles?.totalVehicles ?? '—'}</span>
+          </div>
+        )}
+
+        {/* ── Tab Content: DRIVERS (Admin Approval Workflow) ── */}
+        {activeTab === 'DRIVERS' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/[0.02] p-4 rounded-2xl border border-white/[0.06]">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="Search driver by name / license..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500 w-full sm:w-64"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                {(['all', 'pending', 'verified', 'rejected', 'suspended'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                      statusFilter === st
+                        ? 'bg-violet-600 text-white'
+                        : 'bg-white/[0.04] text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="p-4 rounded-2xl bg-violet-600/10 border border-violet-500/20">
-              <span className="text-[10px] font-semibold text-violet-300 uppercase tracking-wider block mb-1">Platform Commission</span>
-              <span className="text-xl font-extrabold text-violet-300">₹{(stats?.financial?.platformCommission ?? 0).toLocaleString('en-IN')}</span>
+
+            {loadingTable ? (
+              <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
+                <span className="text-xs">Loading drivers registry...</span>
+              </div>
+            ) : drivers.length === 0 ? (
+              <div className="p-12 text-center rounded-2xl bg-white/[0.02] border border-white/[0.06] text-slate-400 text-xs">
+                No driver applications match the selected filter.
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/[0.08] overflow-hidden bg-white/[0.01]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-white/[0.04] text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/[0.08]">
+                      <tr>
+                        <th className="py-3.5 px-4 font-semibold">Driver Details</th>
+                        <th className="py-3.5 px-4 font-semibold">License & City</th>
+                        <th className="py-3.5 px-4 font-semibold">Experience</th>
+                        <th className="py-3.5 px-4 font-semibold">Status</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">Approval Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.06]">
+                      {drivers.map((d) => (
+                        <tr key={d._id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-3.5 px-4">
+                            <p className="font-bold text-white">{d.name}</p>
+                            <p className="text-slate-400 text-[11px]">{d.email} · {d.phone}</p>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <p className="font-semibold text-slate-200">{d.licenseNumber}</p>
+                            <p className="text-slate-500 text-[10px]">{d.city || 'Delhi NCR'}</p>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-300">
+                            {d.experience} Yrs · ₹{d.hourlyRate}/hr
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                              d.verificationStatus === 'verified'
+                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                : d.verificationStatus === 'pending'
+                                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                : d.verificationStatus === 'suspended'
+                                ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                                : 'bg-red-500/15 text-red-300 border border-red-500/30'
+                            }`}>
+                              {d.verificationStatus}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {d.verificationStatus === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => handleVerifyDriverAction(d._id, 'verified')}
+                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-sm transition-all"
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleVerifyDriverAction(d._id, 'rejected')}
+                                    className="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-bold text-[11px] transition-all"
+                                  >
+                                    ✗ Reject
+                                  </button>
+                                </>
+                              )}
+                              {d.verificationStatus === 'verified' && (
+                                <button
+                                  onClick={() => handleVerifyDriverAction(d._id, 'suspended')}
+                                  className="px-3 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 font-bold text-[11px] transition-all"
+                                >
+                                  Suspend
+                                </button>
+                              )}
+                              {(d.verificationStatus === 'suspended' || d.verificationStatus === 'rejected') && (
+                                <button
+                                  onClick={() => handleVerifyDriverAction(d._id, 'verified')}
+                                  className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-bold text-[11px] transition-all"
+                                >
+                                  Re-Approve
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Tab Content: USERS ── */}
+        {activeTab === 'USERS' && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-white/[0.08] overflow-hidden bg-white/[0.01]">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-white/[0.04] text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/[0.08]">
+                  <tr>
+                    <th className="py-3 px-4">User</th>
+                    <th className="py-3 px-4">Role</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.06]">
+                  {users.map((u) => (
+                    <tr key={u._id} className="hover:bg-white/[0.02]">
+                      <td className="py-3 px-4">
+                        <p className="font-bold text-white">{u.name}</p>
+                        <p className="text-slate-400 text-[11px]">{u.email}</p>
+                      </td>
+                      <td className="py-3 px-4 uppercase text-slate-300">{u.role}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          u.status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'
+                        }`}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        {u.status === 'pending' && (
+                          <button
+                            onClick={() => handleUpdateUserStatusAction(u._id, 'active')}
+                            className="px-2.5 py-1 rounded bg-emerald-600 text-white font-bold text-[10px]"
+                          >
+                            Activate
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

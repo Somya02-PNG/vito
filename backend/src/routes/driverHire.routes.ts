@@ -3,6 +3,7 @@ import {
   searchAndMatchDrivers,
   estimateHirePrice,
   requestDriverHire,
+  getHireStatusById,
   respondToHireRequest,
   verifyServicePin,
   addExtraHours,
@@ -26,14 +27,16 @@ router.post('/estimate', protect, estimateHirePrice);
 
 // Bookings & Lifecycle
 router.post('/request', protect, requestDriverHire);
+router.get('/my-hires', protect, getMyDriverHires);
+router.get('/driver-hires', protect, getDriverAssignedHires);
+router.get('/:id/status', protect, getHireStatusById);
+router.get('/:id', protect, getHireStatusById);
 router.post('/:id/respond', protect, respondToHireRequest);
 router.post('/:id/verify-pin', protect, verifyServicePin);
 router.post('/:id/extra-hours', protect, addExtraHours);
 router.post('/:id/complete', protect, completeHireService);
 router.post('/:id/rate', protect, rateDriverHire);
 router.post('/:id/cancel', protect, cancelHireBooking);
-router.get('/my-hires', protect, getMyDriverHires);
-router.get('/driver-hires', protect, getDriverAssignedHires);
 
 // Legacy backwards compatibility routes
 router.get('/drivers/hire', protect, getAvailableDrivers);

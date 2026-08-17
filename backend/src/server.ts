@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db';
+import { autoSeedRentals } from './services/rentalSeeder.service';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import vehicleRoutes from './routes/vehicle.routes';
@@ -16,6 +17,7 @@ import adminRoutes from './routes/admin.routes';
 import paymentRoutes from './routes/payment.routes';
 import seedRoutes from './routes/seed.routes';
 import partnerRoutes from './routes/partner.routes';
+import rentalBookingRoutes from './routes/rentalBooking.routes';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 
 dotenv.config();
@@ -36,7 +38,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Connect Database
-connectDB();
+connectDB().then((connected) => {
+  if (connected) {
+    autoSeedRentals().catch((err) => console.error('Auto seed error:', err));
+  }
+});
 
 // API Routes
 app.use('/api', healthRoutes);
@@ -44,6 +50,7 @@ app.use('/api', authRoutes);
 app.use('/api', vehicleRoutes);
 app.use('/api', rentalRoutes);
 app.use('/api', rideRoutes);
+app.use('/api/driver-hire', driverHireRoutes);
 app.use('/api', driverHireRoutes);
 app.use('/api', safetyRoutes);
 app.use('/api', expenseRoutes);
@@ -52,6 +59,7 @@ app.use('/api', adminRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', seedRoutes);
 app.use('/api', partnerRoutes);
+app.use('/api/rental', rentalBookingRoutes);
 
 // Root Endpoint
 app.get('/', (req: Request, res: Response) => {

@@ -98,11 +98,23 @@ export default function PartnerLoginPage() {
             <p className="text-sm text-slate-400 mt-1">Access your driver or rental partner dashboard</p>
           </div>
 
-          {/* Error Alert */}
+          {/* Error / Pending Notice */}
           {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-red-950/40 border border-red-800/40 text-red-300 text-sm flex items-start gap-2.5 animate-in fade-in duration-200">
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
+            <div className={`mb-5 p-3.5 rounded-xl text-sm flex items-start gap-2.5 animate-in fade-in duration-200 ${
+              error.toLowerCase().includes('pending')
+                ? 'bg-amber-950/40 border border-amber-500/40 text-amber-200'
+                : 'bg-red-950/40 border border-red-800/40 text-red-300'
+            }`}>
+              {error.toLowerCase().includes('pending') ? (
+                <Clock className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+              ) : (
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              )}
+              <span>
+                {error.toLowerCase().includes('pending')
+                  ? "Your driver application is under review. We'll notify you once approved."
+                  : error}
+              </span>
             </div>
           )}
 

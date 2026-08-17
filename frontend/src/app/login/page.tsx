@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth, getDashboardPath } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -11,11 +11,14 @@ import {
   Building2,
   Shield,
   ArrowRight,
+  Play,
+  Loader2,
 } from 'lucide-react';
 
 export default function AuthenticationGatewayPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, demoLogin } = useAuth();
   const router = useRouter();
+  const [launchingRole, setLaunchingRole] = useState<string | null>(null);
 
   // Redirect already-authenticated users to their dashboard
   useEffect(() => {
@@ -23,6 +26,19 @@ export default function AuthenticationGatewayPage() {
       router.replace(getDashboardPath(user));
     }
   }, [user, loading, router]);
+
+  const handleQuickDemo = async (role: 'customer' | 'driver' | 'partner' | 'admin') => {
+    setLaunchingRole(role);
+    try {
+      const loggedUser = await demoLogin(role);
+      const path = getDashboardPath(loggedUser);
+      router.push(path);
+    } catch (err) {
+      console.error('Quick demo launch error:', err);
+    } finally {
+      setLaunchingRole(null);
+    }
+  };
 
   if (loading) return null;
   if (user) return null; // Will redirect
@@ -34,7 +50,7 @@ export default function AuthenticationGatewayPage() {
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 -right-40 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-2xl relative z-10 space-y-8">
+      <div className="w-full max-w-3xl relative z-10 space-y-8">
         {/* VITO Branding */}
         <div className="text-center space-y-3">
           <Link href="/" className="inline-flex items-center gap-3 group">
@@ -51,10 +67,10 @@ export default function AuthenticationGatewayPage() {
 
           <div className="pt-2">
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-              How would you like to use VITO?
+              Select Your Dashboard Portal
             </h1>
             <p className="text-xs md:text-sm text-slate-400 mt-1">
-              Select your role portal to continue to login
+              Sign in with your credentials or launch 1-click Demo Mode instantly
             </p>
           </div>
         </div>
@@ -62,10 +78,7 @@ export default function AuthenticationGatewayPage() {
         {/* 3 Public Role Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* 1. CUSTOMER */}
-          <Link
-            href="/customer/login"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-white/[0.08] hover:border-blue-500/40 hover:bg-[#111827] transition-all duration-200 shadow-xl shadow-black/40 hover:-translate-y-1"
-          >
+          <div className="group flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-white/[0.08] hover:border-blue-500/40 hover:bg-[#111827] transition-all duration-200 shadow-xl shadow-black/40 hover:-translate-y-1">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <UserCircle className="w-6 h-6 text-blue-400" />
@@ -77,17 +90,33 @@ export default function AuthenticationGatewayPage() {
                 </p>
               </div>
             </div>
-            <div className="mt-8 flex items-center gap-1.5 text-xs font-bold text-blue-400 group-hover:text-blue-300">
-              <span>Continue as Customer</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+
+            <div className="mt-8 space-y-2">
+              <button
+                onClick={() => handleQuickDemo('customer')}
+                disabled={launchingRole === 'customer'}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl font-bold text-xs text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-950/40 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {launchingRole === 'customer' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                )}
+                <span>1-Click Demo</span>
+              </button>
+
+              <Link
+                href="/customer/login"
+                className="flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold text-slate-400 hover:text-white border border-white/[0.08] hover:bg-white/[0.05] transition-colors"
+              >
+                <span>Account Login</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          </Link>
+          </div>
 
           {/* 2. DRIVER */}
-          <Link
-            href="/driver/login"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-white/[0.08] hover:border-emerald-500/40 hover:bg-[#111827] transition-all duration-200 shadow-xl shadow-black/40 hover:-translate-y-1"
-          >
+          <div className="group flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-white/[0.08] hover:border-emerald-500/40 hover:bg-[#111827] transition-all duration-200 shadow-xl shadow-black/40 hover:-translate-y-1">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Car className="w-6 h-6 text-emerald-400" />
@@ -99,17 +128,33 @@ export default function AuthenticationGatewayPage() {
                 </p>
               </div>
             </div>
-            <div className="mt-8 flex items-center gap-1.5 text-xs font-bold text-emerald-400 group-hover:text-emerald-300">
-              <span>Continue as Driver</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+
+            <div className="mt-8 space-y-2">
+              <button
+                onClick={() => handleQuickDemo('driver')}
+                disabled={launchingRole === 'driver'}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl font-bold text-xs text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-950/40 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {launchingRole === 'driver' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                )}
+                <span>1-Click Demo</span>
+              </button>
+
+              <Link
+                href="/driver/login"
+                className="flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold text-slate-400 hover:text-white border border-white/[0.08] hover:bg-white/[0.05] transition-colors"
+              >
+                <span>Driver Login</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          </Link>
+          </div>
 
           {/* 3. RENTAL PARTNER */}
-          <Link
-            href="/partner/login"
-            className="group flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-white/[0.08] hover:border-cyan-500/40 hover:bg-[#111827] transition-all duration-200 shadow-xl shadow-black/40 hover:-translate-y-1"
-          >
+          <div className="group flex flex-col justify-between p-6 rounded-2xl bg-[#111827]/90 border border-white/[0.08] hover:border-cyan-500/40 hover:bg-[#111827] transition-all duration-200 shadow-xl shadow-black/40 hover:-translate-y-1">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Building2 className="w-6 h-6 text-cyan-400" />
@@ -121,11 +166,30 @@ export default function AuthenticationGatewayPage() {
                 </p>
               </div>
             </div>
-            <div className="mt-8 flex items-center gap-1.5 text-xs font-bold text-cyan-400 group-hover:text-cyan-300">
-              <span>Partner Dashboard</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+
+            <div className="mt-8 space-y-2">
+              <button
+                onClick={() => handleQuickDemo('partner')}
+                disabled={launchingRole === 'partner'}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl font-bold text-xs text-white bg-cyan-600 hover:bg-cyan-500 shadow-lg shadow-cyan-950/40 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {launchingRole === 'partner' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                )}
+                <span>1-Click Demo</span>
+              </button>
+
+              <Link
+                href="/partner/login"
+                className="flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-semibold text-slate-400 hover:text-white border border-white/[0.08] hover:bg-white/[0.05] transition-colors"
+              >
+                <span>Partner Login</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          </Link>
+          </div>
         </div>
 
         {/* Bottom Prompts & Subtle Restricted Admin Access Link */}
@@ -137,7 +201,15 @@ export default function AuthenticationGatewayPage() {
             </Link>
           </p>
 
-          <div className="pt-2">
+          <div className="pt-2 flex items-center gap-4">
+            <button
+              onClick={() => handleQuickDemo('admin')}
+              className="text-xs text-amber-400 hover:text-amber-300 font-semibold transition-colors flex items-center gap-1"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Launch Demo Admin Portal</span>
+            </button>
+            <span className="text-slate-700">•</span>
             <Link
               href="/admin/login"
               className="text-[11px] text-slate-600 hover:text-slate-400 transition-colors underline decoration-slate-700 underline-offset-4"

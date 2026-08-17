@@ -21,7 +21,10 @@ export const protect = async (
   next: NextFunction
 ) => {
   try {
-    const token = req.cookies?.vito_token;
+    let token = req.cookies?.vito_token;
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
 
     if (!token) {
       return next(new AppError('Not authenticated. Please log in.', 401));

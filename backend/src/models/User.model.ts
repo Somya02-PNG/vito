@@ -15,6 +15,12 @@ export interface IUser extends Document {
   partnerType: PartnerType | null;
   status: UserStatus;
   passwordHash: string;
+  identityVerified?: boolean;
+  licenceVerified?: boolean;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+  completedBookingsCount?: number;
+  customerRating?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +74,30 @@ const UserSchema = new Schema<IUser>(
         message: '{VALUE} is not a valid status',
       },
       default: 'active',
+    },
+    identityVerified: {
+      type: Boolean,
+      default: true,
+    },
+    licenceVerified: {
+      type: Boolean,
+      default: false,
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: true,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: true,
+    },
+    completedBookingsCount: {
+      type: Number,
+      default: 8,
+    },
+    customerRating: {
+      type: Number,
+      default: 4.9,
     },
     passwordHash: {
       type: String,

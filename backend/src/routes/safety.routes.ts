@@ -6,6 +6,7 @@ import {
   deleteContact,
   triggerSOS,
   generateShareableLink,
+  reportSafetyConcern,
 } from '../controllers/safety.controller';
 import { protect } from '../middleware/auth.middleware';
 
@@ -19,5 +20,6 @@ router.delete('/safety/contacts/:id', protect, deleteContact);
 
 router.post('/safety/sos', protect, triggerSOS);
 router.post('/safety/share-link', protect, generateShareableLink);
+router.post('/safety/report-concern', protect, reportSafetyConcern);
 
 export default router;

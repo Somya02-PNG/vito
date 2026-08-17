@@ -366,3 +366,113 @@ export const logout = (
     message: 'Logged out successfully.',
   });
 };
+
+// ─── Demo Login ─────────────────────────────────────────────────────────────
+export const demoLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { role } = req.body;
+    const targetRole = role || 'customer';
+
+    let email = 'customer@vito.com';
+    let name = 'Demo Customer';
+    let userRole = 'customer';
+    let partnerType: 'driver' | 'rental_partner' | null = null;
+
+    if (targetRole === 'driver') {
+      email = 'driver@vito.com';
+      name = 'Demo Driver Partner';
+      userRole = 'partner';
+      partnerType = 'driver';
+    } else if (targetRole === 'partner' || targetRole === 'rental_partner') {
+      email = 'partner@vito.com';
+      name = 'Demo Rental Partner';
+      userRole = 'partner';
+      partnerType = 'rental_partner';
+    } else if (targetRole === 'admin') {
+      email = 'admin@vito.com';
+      name = 'VITO Platform Admin';
+      userRole = 'admin';
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const passwordHash = await bcrypt.hash('vito@2026', 10);
+      user = await User.create({
+        name,
+        email,
+        phone: '+919876543210',
+        passwordHash,
+        role: userRole,
+        partnerType,
+        status: 'active',
+      });
+    } else {
+      let updated = false;
+      if (user.status !== 'active') {
+        user.status = 'active';
+        updated = true;
+      }
+      if (user.role !== userRole) {
+        user.role = userRole as any;
+        updated = true;
+      }
+      if (partnerType && user.partnerType !== partnerType) {
+        user.partnerType = partnerType;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
+    }
+
+    // Ensure driver profile exists if driver
+    if (userRole === 'partner' && partnerType === 'driver') {
+      const existingDriver = await Driver.findOne({ userId: user._id });
+      if (!existingDriver) {
+        await Driver.create({
+          userId: user._id,
+          licenseNumber: 'DL-00-2026-DEMO',
+          experience: 8,
+          city: 'New Delhi',
+          hourlyRate: 200,
+          verificationStatus: 'verified',
+          availability: true,
+          rating: 4.9,
+          walletBalance: 15400,
+        });
+      }
+    }
+
+    // Ensure rental partner profile exists if rental partner
+    if (userRole === 'partner' && partnerType === 'rental_partner') {
+      const existingRentalPartner = await RentalPartner.findOne({ userId: user._id });
+      if (!existingRentalPartner) {
+        await RentalPartner.create({
+          userId: user._id,
+          businessName: 'VITO Fleet Services',
+          city: 'New Delhi',
+          fleetCount: 15,
+          verificationStatus: 'verified',
+        });
+      }
+    }
+
+    // Sign JWT & set cookie
+    signTokenAndSetCookie(user._id.toString(), user.role, res);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: buildUserResponse(user),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

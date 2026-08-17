@@ -3,6 +3,7 @@ import User from '../models/User.model';
 import Vehicle from '../models/Vehicle.model';
 import Driver from '../models/Driver.model';
 import Rental from '../models/Rental.model';
+import RentalBooking from '../models/RentalBooking.model';
 import Ride from '../models/Ride.model';
 import DriverHire from '../models/DriverHire.model';
 import Trip from '../models/Trip.model';
@@ -177,16 +178,19 @@ export const SEED_VEHICLES = [
 ];
 
 export const SEED_DRIVERS = [
-  { licenseNumber: 'DL-04-2021-99812', experience: 9, rating: 4.9, hourlyRate: 180, verificationStatus: 'verified', walletBalance: 12480 },
-  { licenseNumber: 'DL-02-2019-44120', experience: 7, rating: 4.8, hourlyRate: 160, verificationStatus: 'verified', walletBalance: 9800 },
-  { licenseNumber: 'DL-01-2017-11234', experience: 12, rating: 4.95, hourlyRate: 220, verificationStatus: 'verified', walletBalance: 18500 },
-  { licenseNumber: 'DL-05-2023-88712', experience: 5, rating: 4.7, hourlyRate: 150, verificationStatus: 'verified', walletBalance: 6400 },
-  { licenseNumber: 'DL-03-2018-33419', experience: 10, rating: 4.85, hourlyRate: 200, verificationStatus: 'verified', walletBalance: 14200 },
-  { licenseNumber: 'DL-07-2020-55891', experience: 8, rating: 4.9, hourlyRate: 190, verificationStatus: 'verified', walletBalance: 11100 },
-  { licenseNumber: 'DL-08-2021-77123', experience: 6, rating: 4.8, hourlyRate: 170, verificationStatus: 'verified', walletBalance: 8700 },
-  { licenseNumber: 'DL-09-2014-99001', experience: 15, rating: 4.98, hourlyRate: 250, verificationStatus: 'verified', walletBalance: 24500 },
-  { licenseNumber: 'DL-10-2024-11223', experience: 4, rating: 4.6, hourlyRate: 140, verificationStatus: 'pending', walletBalance: 3200 },
-  { licenseNumber: 'DL-11-2016-44556', experience: 11, rating: 4.9, hourlyRate: 210, verificationStatus: 'verified', walletBalance: 16800 },
+  { licenseNumber: 'DL-04-2021-99812', experience: 9, rating: 4.92, hourlyRate: 180, verificationStatus: 'verified', walletBalance: 12480, city: 'New Delhi' },
+  { licenseNumber: 'DL-02-2019-44120', experience: 12, rating: 4.95, hourlyRate: 220, verificationStatus: 'verified', walletBalance: 18500, city: 'Gurugram' },
+  { licenseNumber: 'DL-01-2017-11234', experience: 7, rating: 4.88, hourlyRate: 170, verificationStatus: 'verified', walletBalance: 9800, city: 'New Delhi' },
+  { licenseNumber: 'DL-05-2023-88712', experience: 5, rating: 4.78, hourlyRate: 150, verificationStatus: 'verified', walletBalance: 6400, city: 'Noida' },
+  { licenseNumber: 'DL-03-2018-33419', experience: 10, rating: 4.85, hourlyRate: 200, verificationStatus: 'verified', walletBalance: 14200, city: 'New Delhi' },
+];
+
+const DRIVER_NAMES = [
+  { name: 'Ramesh Chandra', email: 'driver1@vito.com', phone: '+919876512345' },
+  { name: 'Gurpreet Singh', email: 'driver2@vito.com', phone: '+919711154321' },
+  { name: 'Sunita Malhotra', email: 'driver3@vito.com', phone: '+919812367890' },
+  { name: 'Amit Joshi', email: 'driver4@vito.com', phone: '+919999944444' },
+  { name: 'Sanjay Kumar', email: 'driver5@vito.com', phone: '+919888833333' },
 ];
 
 export const seedDatabase = async (
@@ -223,15 +227,19 @@ export const seedDatabase = async (
     const driversWithUser = [];
     for (let i = 0; i < SEED_DRIVERS.length; i++) {
       const dData = SEED_DRIVERS[i];
-      let driverUser = await User.findOne({ email: `driver${i + 1}@vito.com` });
+      const driverInfo = DRIVER_NAMES[i] || { name: `Driver Partner ${i + 1}`, email: `driver${i + 1}@vito.com`, phone: `+91987654320${i}` };
+      let driverUser = await User.findOne({ email: driverInfo.email });
       if (!driverUser) {
         driverUser = await User.create({
-          name: `Driver Partner ${i + 1}`,
-          email: `driver${i + 1}@vito.com`,
-          phone: `+91987654320${i}`,
+          name: driverInfo.name,
+          email: driverInfo.email,
+          phone: driverInfo.phone,
           passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz123456',
           role: 'driver',
         });
+      } else {
+        driverUser.name = driverInfo.name;
+        await driverUser.save();
       }
       driversWithUser.push({ ...dData, userId: driverUser._id });
     }
@@ -332,3 +340,39 @@ export const seedDatabase = async (
     next(error);
   }
 };
+
+// ─── Seed Rental Vehicles & Hubs ──────────────────────────────────────────────
+export const seedRentals = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { autoSeedRentals } = await import('../services/rentalSeeder.service');
+    const RentalHub = (await import('../models/RentalHub.model')).default;
+    await autoSeedRentals();
+
+    const hubs = await RentalHub.find({ status: 'ACTIVE' }).lean();
+    const vehicles = await Vehicle.find({ isDemo: true, status: 'VERIFIED' }).lean();
+
+    res.status(200).json({
+      success: true,
+      message: `Rental hubs and vehicles seeded successfully! ${hubs.length} Hubs and ${vehicles.length} Vehicles ready.`,
+      data: {
+        hubs: hubs.map((h) => ({ name: h.name, code: h.code, city: h.city, fleetCount: h.totalFleetCount })),
+        vehicles: vehicles.map((v: any) => ({
+          _id: v._id,
+          name: v.name,
+          category: v.category,
+          city: v.city,
+          hubName: v.hubName,
+          pricePerDay: v.pricePerDay,
+          status: v.status,
+        })),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

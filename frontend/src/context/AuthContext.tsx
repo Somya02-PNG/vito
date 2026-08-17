@@ -48,6 +48,7 @@ interface AuthContextValue {
   refetchUser: () => Promise<void>;
   signup: (payload: SignupPayload) => Promise<void>;
   login: (payload: LoginPayload) => Promise<AuthUser>;
+  demoLogin: (role: 'customer' | 'driver' | 'partner' | 'admin') => Promise<AuthUser>;
   logout: () => Promise<void>;
   getDashboardPath: (user: AuthUser) => string;
 }
@@ -117,6 +118,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return authUser;
   }, []);
 
+  const demoLogin = useCallback(async (role: 'customer' | 'driver' | 'partner' | 'admin'): Promise<AuthUser> => {
+    const res = await fetchAPI<{ user: AuthUser }>('/api/auth/demo-login', {
+      method: 'POST',
+      body: { role },
+    });
+    const authUser = res.data?.user ?? null;
+    setUser(authUser);
+    if (!authUser) throw new Error('Demo login failed.');
+    return authUser;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await fetchAPI('/api/auth/logout', { method: 'POST' });
@@ -137,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refetchUser: fetchUser,
         signup,
         login,
+        demoLogin,
         logout,
         getDashboardPath: getDashboardPathBound,
       }}

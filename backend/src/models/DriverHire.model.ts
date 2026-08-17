@@ -32,6 +32,7 @@ export interface IDriverHire extends Document {
   serviceType: 'hourly' | 'full_day' | 'outstation' | 'airport' | 'event';
   hourlyRate: number;
   pickupLocation: string;
+  approximatePickupArea?: string;
   pickupCoords?: { lat: number; lng: number };
   destinationLocation?: string;
   destinationCoords?: { lat: number; lng: number };
