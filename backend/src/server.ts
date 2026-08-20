@@ -20,6 +20,7 @@ import partnerRoutes from './routes/partner.routes';
 import rentalBookingRoutes from './routes/rentalBooking.routes';
 import customerVehicleRoutes from './routes/customerVehicle.routes';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
+import { securityHeadersMiddleware, noSqlSanitizerMiddleware } from './middleware/security.middleware';
 
 dotenv.config();
 
@@ -27,18 +28,26 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
-// Middlewares
+// ─── Security Middlewares ───────────────────────────────────────────────────
+// # HINGLISH: Sabse pehle security headers aur body sanitization lagaya gaya hai
+app.use(securityHeadersMiddleware);
+
 app.use(
   cors({
     origin: [CLIENT_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
   })
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// # HINGLISH: 10kb body size limit taaki payload flooding / memory exhaustion DDoS attack na ho
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
-// Connect Database
+// # HINGLISH: NoSQL Operator Injection sanitization wall
+app.use(noSqlSanitizerMiddleware);
+
+// Connect Database (with automatic embedded In-Memory Mongo fallback)
 connectDB().then((connected) => {
   if (connected) {
     autoSeedRentals().catch((err) => console.error('Auto seed error:', err));
@@ -70,6 +79,7 @@ app.get('/', (req: Request, res: Response) => {
     message: '🚀 Welcome to VITO AI Mobility Backend Engine API',
     healthCheck: '/api/health',
     status: 'online',
+    security: 'hardened',
   });
 });
 

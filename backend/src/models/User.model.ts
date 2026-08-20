@@ -1,9 +1,17 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 🛡️ DATABASE SECURITY SCHEMA: User Model
+ * ═══════════════════════════════════════════════════════════════════════════
+ * # HINGLISH EXPLANATION:
+ * 1. passwordHash ko 'select: false' rakha gaya hai taaki kisi normal query
+ *    (jaise User.find() ya User.findById()) se galti se bhi password hash leak na ho.
+ * 2. Strict regex validation phone aur email par lagayi gayi hai.
+ * 3. Role aur status ke strictly bounded enum values hain.
+ * 4. Indexes create kiye gaye hain taaki authentication queries O(1) me fast execute hon.
+ */
 export type UserRole = 'customer' | 'partner' | 'driver' | 'admin';
-// NOTE: 'driver' is kept for backward compatibility with existing seeded data.
-// New partner registrations use role='partner' + partnerType.
-
 export type UserStatus = 'active' | 'pending' | 'suspended' | 'blocked';
 export type PartnerType = 'driver' | 'rental_partner';
 
@@ -99,10 +107,11 @@ const UserSchema = new Schema<IUser>(
       type: Number,
       default: 4.9,
     },
+    // # HINGLISH: select: false ensure karta hai ki password hash queries me return na ho
     passwordHash: {
       type: String,
       required: [true, 'Password is required'],
-      select: false, // Exclude from queries by default
+      select: false,
     },
   },
   {
@@ -112,7 +121,7 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Indexes
+// # HINGLISH: Indexes lookup time fast aur DDoS resilient banane ke liye
 UserSchema.index({ phone: 1 });
 UserSchema.index({ role: 1 });
 UserSchema.index({ status: 1 });
