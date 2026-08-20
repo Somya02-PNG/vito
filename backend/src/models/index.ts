@@ -2,7 +2,7 @@ export { default as User } from './User.model';
 export type { IUser, UserRole, UserStatus, PartnerType } from './User.model';
 
 export { default as Driver } from './Driver.model';
-export type { IDriver, VerificationStatus } from './Driver.model';
+export type { IDriver, VerificationStatus, IDriverLocation } from './Driver.model';
 
 export { default as RentalPartner } from './RentalPartner.model';
 export type { IRentalPartner, RentalPartnerVerificationStatus } from './RentalPartner.model';

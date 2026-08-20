@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { fetchAPI } from '@/lib/api';
+import AddressAutocomplete, { NominatimLocation } from '@/components/AddressAutocomplete';
 import {
   ArrowLeft,
   Calendar,
@@ -549,16 +550,13 @@ export default function BookingPage() {
                       <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
                         Delivery Address
                       </label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                        <textarea
-                          value={deliveryAddress}
-                          onChange={(e) => setDeliveryAddress(e.target.value)}
-                          placeholder="Enter your full delivery address..."
-                          rows={2}
-                          className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-primary-500/40 focus:ring-1 focus:ring-primary-500/20 transition-all resize-none"
-                        />
-                      </div>
+                      <AddressAutocomplete
+                        value={deliveryAddress}
+                        onChange={(val) => setDeliveryAddress(val)}
+                        onSelectLocation={(loc: NominatimLocation) => setDeliveryAddress(loc.address)}
+                        placeholder="Search full delivery address..."
+                        icon={<MapPin className="w-4 h-4 text-emerald-400" />}
+                      />
                     </div>
 
                     {/* Distance Slab Selector */}

@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import Ride from '../models/Ride.model';
 import Driver from '../models/Driver.model';
+<<<<<<< HEAD
 import User from '../models/User.model';
+=======
+>>>>>>> somya
 import { AppError } from '../middleware/error.middleware';
 
 // ─── Helper: Generate 4-digit OTP ──────────────────────────────────────────
@@ -9,6 +12,7 @@ const generate4DigitOTP = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
+<<<<<<< HEAD
 // ─── Pricing Rates Configuration ────────────────────────────────────────────
 export interface CategoryPricing {
   id: string;
@@ -153,11 +157,16 @@ export const calculateFareBreakdown = (
 
 // ─── 1. Estimate Fare Endpoint ──────────────────────────────────────────────
 export const estimateFare = async (
+=======
+// ─── Get Nearby Drivers (5km radius via $nearSphere with optional category) ──
+export const getNearbyDrivers = async (
+>>>>>>> somya
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
+<<<<<<< HEAD
     const { distanceKm, durationMin, scheduledTime } = req.body;
     const dist = Number(distanceKm) || 8.5;
     const dur = Number(durationMin) || 20;
@@ -173,6 +182,100 @@ export const estimateFare = async (
         distanceKm: dist,
         durationMin: dur,
         categories,
+=======
+    const latStr = req.query.lat as string;
+    const lngStr = req.query.lng as string;
+    const category = req.query.category as string; // Mini, Sedan, SUV, Premium
+
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      return next(new AppError('Valid lat and lng query parameters are required.', 400));
+    }
+
+    const radiusInMeters = 5000; // 5 km radius
+
+    let drivers: any[] = [];
+    try {
+      drivers = await Driver.find({
+        availability: true,
+        location: {
+          $nearSphere: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [lng, lat],
+            },
+            $maxDistance: radiusInMeters,
+          },
+        },
+      })
+        .populate('userId', 'name phone profileImage')
+        .lean();
+    } catch (geoErr) {
+      drivers = [];
+    }
+
+    // Fallback: If no drivers are within 5km of coordinates, return available drivers in DB
+    if (drivers.length === 0) {
+      drivers = await Driver.find({ availability: true })
+        .populate('userId', 'name phone profileImage')
+        .limit(10)
+        .lean();
+    }
+
+    const vehicleModels: Record<string, string[]> = {
+      Mini: ['Maruti WagonR', 'Tata Tiago', 'Hyundai Santro'],
+      Sedan: ['Maruti Swift Dzire', 'Hyundai Aura', 'Honda Amaze'],
+      SUV: ['Toyota Innova Crysta', 'Mahindra XUV700', 'Tata Harrier'],
+      Premium: ['Mercedes C-Class', 'BMW 3 Series', 'Audi A4'],
+    };
+
+    const categories = ['Mini', 'Sedan', 'SUV', 'Premium'];
+
+    let formattedDrivers = drivers.map((d: any, idx: number) => {
+      const dLat = d.location?.lat ?? (lat + (idx % 2 === 0 ? 0.003 * (idx + 1) : -0.003 * (idx + 1)));
+      const dLng = d.location?.lng ?? (lng + (idx % 2 === 0 ? 0.004 * (idx + 1) : -0.004 * (idx + 1)));
+      const name = d.userId?.name || `Driver ${d.licenseNumber || idx + 1}`;
+      const initials = name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+      const cat = category && categories.includes(category) ? category : categories[idx % categories.length];
+      const modelList = vehicleModels[cat] || vehicleModels['Sedan'];
+      const vehicleModel = modelList[idx % modelList.length];
+
+      const fare = d.hourlyRate ? Math.round(d.hourlyRate * 1.4) : (idx === 0 ? 180 : 250 + idx * 45);
+
+      return {
+        id: d._id.toString(),
+        _id: d._id.toString(),
+        name,
+        vehicleModel,
+        vehicleNo: d.licenseNumber || `DL 0${idx + 1} AB ${1000 + idx * 234}`,
+        category: cat,
+        rating: d.rating || parseFloat((4.6 + (idx % 4) * 0.1).toFixed(1)),
+        eta: `${2 + idx} mins`,
+        fare,
+        lat: dLat,
+        lng: dLng,
+        phone: d.userId?.phone || `+91 98765 ${43210 + idx}`,
+        avatar: d.profileImage || initials || 'DR',
+      };
+    });
+
+    if (category && category !== 'all') {
+      formattedDrivers = formattedDrivers.filter((d) => d.category === category);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        drivers: formattedDrivers,
+>>>>>>> somya
       },
     });
   } catch (error) {
@@ -180,6 +283,7 @@ export const estimateFare = async (
   }
 };
 
+<<<<<<< HEAD
 // ─── 2. Get Available Drivers for Matching ──────────────────────────────────
 export const getAvailableDrivers = async (
   req: Request,
@@ -248,6 +352,9 @@ export const getAvailableDrivers = async (
 };
 
 // ─── 3. Create Ride Request ─────────────────────────────────────────────────
+=======
+// ─── Create Ride Request ───────────────────────────────────────────────────
+>>>>>>> somya
 export const createRide = async (
   req: Request,
   res: Response,
@@ -255,6 +362,7 @@ export const createRide = async (
 ) => {
   try {
     const riderId = req.user!._id;
+<<<<<<< HEAD
     const {
       pickup,
       drop,
@@ -269,8 +377,11 @@ export const createRide = async (
       driverId,
       paymentMethod = 'upi',
     } = req.body;
+=======
+    const { pickup, drop, stops, vehicleType, fare, fareBreakdown, driverId, status } = req.body;
+>>>>>>> somya
 
-    if (!pickup || !drop || !fare) {
+    if (!pickup || !drop || fare === undefined) {
       return next(new AppError('Pickup location, drop location, and fare are required.', 400));
     }
 
@@ -284,6 +395,8 @@ export const createRide = async (
 
     const otp = generate4DigitOTP();
 
+    const rideStatus = status || (driverId ? 'driver_assigned' : 'searching_driver');
+
     const ride = await Ride.create({
       riderId,
       pickup: {
@@ -296,6 +409,7 @@ export const createRide = async (
         lat: drop.lat,
         lng: drop.lng,
       },
+<<<<<<< HEAD
       stops: Array.isArray(stops) ? stops : [],
       category,
       fare,
@@ -309,14 +423,26 @@ export const createRide = async (
       driverInfo: driverInfo || null,
       paymentMethod,
       paymentStatus: 'pending',
+=======
+      stops: stops || [],
+      vehicleType: vehicleType || 'Sedan',
+      driverId: driverId || null,
+      fare,
+      fareBreakdown: fareBreakdown || null,
+      otp,
+      status: rideStatus,
+>>>>>>> somya
     });
 
     res.status(201).json({
       success: true,
       data: {
         ride,
+<<<<<<< HEAD
         otp,
         driverInfo: driverInfo || null,
+=======
+>>>>>>> somya
       },
     });
   } catch (error) {
@@ -360,7 +486,11 @@ export const verifyOTP = async (
   }
 };
 
+<<<<<<< HEAD
 // ─── 5. Update Ride Status ──────────────────────────────────────────────────
+=======
+// ─── Update Ride Status (Supports all state machine steps) ────────────────
+>>>>>>> somya
 export const updateRideStatus = async (
   req: Request,
   res: Response,
@@ -368,6 +498,7 @@ export const updateRideStatus = async (
 ) => {
   try {
     const { id } = req.params;
+<<<<<<< HEAD
     const { status, paymentStatus } = req.body;
 
     const validStatuses = [
@@ -384,6 +515,24 @@ export const updateRideStatus = async (
 
     if (!status || !validStatuses.includes(status)) {
       return next(new AppError(`Invalid ride status. Allowed values: ${validStatuses.join(', ')}`, 400));
+=======
+    const { status, cancellationFee, updatedDrop, updatedFare } = req.body;
+
+    const validStates = [
+      'requested',
+      'searching_driver',
+      'driver_assigned',
+      'driver_arriving',
+      'driver_arrived',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'no_driver_available',
+    ];
+
+    if (!status || !validStates.includes(status)) {
+      return next(new AppError(`Invalid status '${status}'. Must be one of ${validStates.join(', ')}`, 400));
+>>>>>>> somya
     }
 
     const ride = await Ride.findById(id);
@@ -391,10 +540,27 @@ export const updateRideStatus = async (
       return next(new AppError('Ride not found.', 404));
     }
 
+<<<<<<< HEAD
     ride.status = status as any;
     if (paymentStatus) {
       ride.paymentStatus = paymentStatus;
     }
+=======
+    ride.status = status;
+
+    if (status === 'cancelled' && cancellationFee) {
+      ride.cancellationFee = cancellationFee;
+    }
+
+    if (updatedDrop) {
+      ride.drop = updatedDrop;
+    }
+
+    if (updatedFare !== undefined) {
+      ride.fare = updatedFare;
+    }
+
+>>>>>>> somya
     await ride.save();
 
     res.status(200).json({
@@ -407,7 +573,11 @@ export const updateRideStatus = async (
   }
 };
 
+<<<<<<< HEAD
 // ─── 6. Rate Ride & Driver ──────────────────────────────────────────────────
+=======
+// ─── Rate Driver & Submit Review/Tip ──────────────────────────────────────
+>>>>>>> somya
 export const rateRide = async (
   req: Request,
   res: Response,
@@ -415,11 +585,18 @@ export const rateRide = async (
 ) => {
   try {
     const { id } = req.params;
+<<<<<<< HEAD
     const { rating, feedbackTags = [], feedbackComment = '' } = req.body;
 
     const numRating = Number(rating);
     if (!numRating || numRating < 1 || numRating > 5) {
       return next(new AppError('Rating must be a number between 1 and 5.', 400));
+=======
+    const { rating, comment, tip } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return next(new AppError('Rating must be between 1 and 5 stars.', 400));
+>>>>>>> somya
     }
 
     const ride = await Ride.findById(id);
@@ -427,6 +604,7 @@ export const rateRide = async (
       return next(new AppError('Ride not found.', 404));
     }
 
+<<<<<<< HEAD
     ride.rating = numRating;
     ride.feedbackTags = feedbackTags;
     ride.feedbackComment = feedbackComment;
@@ -439,6 +617,22 @@ export const rateRide = async (
         // Simple incremental moving average update
         const currentRating = driver.rating || 5;
         driver.rating = parseFloat(((currentRating * 9 + numRating) / 10).toFixed(2));
+=======
+    ride.rating = rating;
+    if (comment) ride.comment = comment;
+    if (tip !== undefined) ride.tip = tip;
+
+    await ride.save();
+
+    // Recalculate average rating for the driver if driverId is set
+    if (ride.driverId) {
+      const driver = await Driver.findById(ride.driverId);
+      if (driver) {
+        const completedRides = await Ride.find({ driverId: driver._id, rating: { $ne: null } });
+        const totalRatingSum = completedRides.reduce((sum, r) => sum + (r.rating || 5), 0);
+        const newAvg = completedRides.length > 0 ? parseFloat((totalRatingSum / completedRides.length).toFixed(1)) : rating;
+        driver.rating = newAvg;
+>>>>>>> somya
         await driver.save();
       }
     }
@@ -446,6 +640,7 @@ export const rateRide = async (
     res.status(200).json({
       success: true,
       data: { ride },
+<<<<<<< HEAD
       message: 'Thank you for your rating and feedback!',
     });
   } catch (error) {
@@ -530,6 +725,9 @@ export const getRideById = async (
     res.status(200).json({
       success: true,
       data: { ride },
+=======
+      message: 'Rating and review submitted successfully!',
+>>>>>>> somya
     });
   } catch (error) {
     next(error);

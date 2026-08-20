@@ -2,14 +2,24 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export type RideStatus =
   | 'requested'
+<<<<<<< HEAD
   | 'searching'
   | 'accepted'
   | 'driver_assigned'
   | 'arriving'
   | 'arrived'
+=======
+  | 'searching_driver'
+  | 'driver_assigned'
+  | 'driver_arriving'
+  | 'driver_arrived'
+>>>>>>> somya
   | 'in_progress'
   | 'completed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'no_driver_available'
+  | 'accepted'
+  | 'arriving';
 
 export interface IRideLocation {
   address: string;
@@ -19,6 +29,7 @@ export interface IRideLocation {
 
 export interface IFareBreakdown {
   baseFare: number;
+<<<<<<< HEAD
   distanceCharge: number;
   timeCharge: number;
   surgeMultiplier: number;
@@ -38,19 +49,31 @@ export interface IRideDriverInfo {
   category?: string;
   avatar?: string;
   experience?: number;
+=======
+  distanceFare: number;
+  timeFare: number;
+  surgeMultiplier: number;
+  cancellationFee?: number;
+>>>>>>> somya
 }
 
 export interface IRide extends Document {
   pickup: IRideLocation;
   drop: IRideLocation;
   stops?: IRideLocation[];
+<<<<<<< HEAD
   category?: string;
   driverId: Types.ObjectId | null;
+=======
+  vehicleType?: string;
+  driverId?: Types.ObjectId;
+>>>>>>> somya
   riderId: Types.ObjectId;
   otp: string;
   status: RideStatus;
   fare: number;
   fareBreakdown?: IFareBreakdown;
+<<<<<<< HEAD
   distance?: number;
   duration?: number;
   scheduledFor?: Date | null;
@@ -61,6 +84,12 @@ export interface IRide extends Document {
   driverInfo?: IRideDriverInfo;
   paymentMethod?: string;
   paymentStatus?: 'pending' | 'completed' | 'failed';
+=======
+  cancellationFee?: number;
+  rating?: number;
+  comment?: string;
+  tip?: number;
+>>>>>>> somya
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,6 +119,7 @@ const RideLocationSchema = new Schema<IRideLocation>(
 
 const FareBreakdownSchema = new Schema<IFareBreakdown>(
   {
+<<<<<<< HEAD
     baseFare: { type: Number, default: 0 },
     distanceCharge: { type: Number, default: 0 },
     timeCharge: { type: Number, default: 0 },
@@ -113,6 +143,13 @@ const DriverInfoSchema = new Schema<IRideDriverInfo>(
     category: String,
     avatar: String,
     experience: Number,
+=======
+    baseFare: { type: Number, default: 50 },
+    distanceFare: { type: Number, default: 0 },
+    timeFare: { type: Number, default: 0 },
+    surgeMultiplier: { type: Number, default: 1.0 },
+    cancellationFee: { type: Number, default: 0 },
+>>>>>>> somya
   },
   { _id: false }
 );
@@ -131,9 +168,16 @@ const RideSchema = new Schema<IRide>(
       type: [RideLocationSchema],
       default: [],
     },
+<<<<<<< HEAD
     category: {
       type: String,
       default: 'go',
+=======
+    vehicleType: {
+      type: String,
+      enum: ['Mini', 'Sedan', 'SUV', 'Premium'],
+      default: 'Sedan',
+>>>>>>> somya
     },
     driverId: {
       type: Schema.Types.ObjectId,
@@ -156,6 +200,7 @@ const RideSchema = new Schema<IRide>(
       enum: {
         values: [
           'requested',
+<<<<<<< HEAD
           'searching',
           'accepted',
           'driver_assigned',
@@ -164,6 +209,18 @@ const RideSchema = new Schema<IRide>(
           'in_progress',
           'completed',
           'cancelled',
+=======
+          'searching_driver',
+          'driver_assigned',
+          'driver_arriving',
+          'driver_arrived',
+          'in_progress',
+          'completed',
+          'cancelled',
+          'no_driver_available',
+          'accepted',
+          'arriving',
+>>>>>>> somya
         ],
         message: '{VALUE} is not a valid ride status',
       },
@@ -176,6 +233,7 @@ const RideSchema = new Schema<IRide>(
     },
     fareBreakdown: {
       type: FareBreakdownSchema,
+<<<<<<< HEAD
       default: () => ({}),
     },
     distance: {
@@ -190,12 +248,21 @@ const RideSchema = new Schema<IRide>(
       type: Date,
       default: null,
     },
+=======
+      default: null,
+    },
+    cancellationFee: {
+      type: Number,
+      default: 0,
+    },
+>>>>>>> somya
     rating: {
       type: Number,
       min: 1,
       max: 5,
       default: null,
     },
+<<<<<<< HEAD
     feedbackTags: {
       type: [String],
       default: [],
@@ -221,6 +288,16 @@ const RideSchema = new Schema<IRide>(
       enum: ['pending', 'completed', 'failed'],
       default: 'pending',
     },
+=======
+    comment: {
+      type: String,
+      default: '',
+    },
+    tip: {
+      type: Number,
+      default: 0,
+    },
+>>>>>>> somya
   },
   {
     timestamps: true,

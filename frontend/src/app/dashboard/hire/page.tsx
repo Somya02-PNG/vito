@@ -27,6 +27,7 @@ import {
 
 // Lazy load HireMap to prevent SSR Leaflet errors
 const HireMap = dynamic(() => import('./HireMap'), { ssr: false });
+import AddressAutocomplete, { NominatimLocation } from '@/components/AddressAutocomplete';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Step = 'FORM' | 'SELECT_DRIVER' | 'LIVE_TRACKING' | 'TRIP_COMPLETED';
@@ -148,7 +149,7 @@ export default function DriverHirePage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [driverRating, setDriverRating] = useState(5);
 
-  const pickupCoords: [number, number] = [28.6315, 77.2167];
+  const [pickupCoords, setPickupCoords] = useState<[number, number]>([28.6315, 77.2167]);
 
   // Fetch available drivers on mount
   useEffect(() => {
@@ -318,16 +319,16 @@ export default function DriverHirePage() {
                   <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
                     Pickup Location
                   </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-accent-400" />
-                    <input
-                      type="text"
-                      value={pickupLocation}
-                      onChange={(e) => setPickupLocation(e.target.value)}
-                      placeholder="Enter pickup address..."
-                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-accent-500/40 transition-all"
-                    />
-                  </div>
+                  <AddressAutocomplete
+                    value={pickupLocation}
+                    onChange={(val) => setPickupLocation(val)}
+                    onSelectLocation={(loc: NominatimLocation) => {
+                      setPickupLocation(loc.address);
+                      setPickupCoords([loc.lat, loc.lng]);
+                    }}
+                    placeholder="Search pickup address..."
+                    icon={<MapPin className="w-4 h-4 text-accent-400" />}
+                  />
                 </div>
 
                 {/* Date & Start Time */}
