@@ -17,6 +17,7 @@ const router = Router();
 
 // Pricing & Available Drivers
 router.post('/rides/estimate', estimateFare);
+router.post('/routes/estimate', estimateFare);
 router.get('/rides/available-drivers', getAvailableDrivers);
 
 // Protected routes

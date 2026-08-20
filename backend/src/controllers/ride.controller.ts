@@ -3,6 +3,8 @@ import Ride from '../models/Ride.model';
 import Driver from '../models/Driver.model';
 import User from '../models/User.model';
 import { AppError } from '../middleware/error.middleware';
+import { routingService } from '../services/routing.service';
+import { pricingService } from '../services/pricing.service';
 
 // ─── Helper: Generate 4-digit OTP ──────────────────────────────────────────
 const generate4DigitOTP = (): string => {
@@ -158,9 +160,32 @@ export const estimateFare = async (
   next: NextFunction
 ) => {
   try {
-    const { distanceKm, durationMin, scheduledTime } = req.body;
-    const dist = Number(distanceKm) || 8.5;
-    const dur = Number(durationMin) || 20;
+    const { pickup, drop, distanceKm, durationMin, scheduledTime } = req.body;
+    let dist = Number(distanceKm);
+    let dur = Number(durationMin);
+
+    // If coordinates are provided, compute authoritative OSRM road distance and duration
+    if (
+      pickup &&
+      typeof pickup.lat === 'number' &&
+      typeof pickup.lng === 'number' &&
+      drop &&
+      typeof drop.lat === 'number' &&
+      typeof drop.lng === 'number'
+    ) {
+      const route = await routingService.getRoute(
+        { latitude: pickup.lat, longitude: pickup.lng },
+        { latitude: drop.lat, longitude: drop.lng }
+      );
+      dist = route.distanceKm;
+      dur = route.durationMinutes;
+    } else if (!dist || isNaN(dist)) {
+      dist = 8.5;
+      dur = dur || 20;
+    } else if (!dur || isNaN(dur)) {
+      dur = Math.max(3, Math.ceil((dist / 25) * 60));
+    }
+
     const scheduleDate = scheduledTime ? new Date(scheduledTime) : null;
 
     const categories = Object.keys(CATEGORY_PRICING).map((key) => {
