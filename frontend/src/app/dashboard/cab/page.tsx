@@ -916,41 +916,6 @@ export default function CabBookingPage() {
                       cat.multiplier
                   );
 
-<<<<<<< HEAD
-                <div className="space-y-2.5 max-h-[380px] overflow-y-auto scrollbar-hide pr-1" role="radiogroup" aria-label="Available Cabs">
-                  {drivers.map((driver) => {
-                    const isSelected = Boolean(selectedDriverId && selectedDriverId === driver.id);
-                    return (
-                      <div
-                        key={driver.id}
-                        onClick={() => setSelectedDriverId(driver.id)}
-                        className={`p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                          isSelected
-                            ? 'bg-primary-500/15 border-primary-500/40 text-white shadow-md shadow-primary-500/10'
-                            : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="cab-selection"
-                            value={driver.id}
-                            checked={isSelected}
-                            onChange={() => setSelectedDriverId(driver.id)}
-                            className="sr-only"
-                          />
-                          <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                              isSelected
-                                ? 'border-emerald-400 bg-emerald-500'
-                                : 'border-slate-500 bg-transparent group-hover:border-slate-400'
-                            }`}
-                          >
-                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </div>
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 border border-white/[0.08] flex items-center justify-center text-sm font-extrabold text-primary-300">
-                            {driver.avatar}
-=======
                   return (
                     <div
                       key={cat.id}
@@ -969,7 +934,6 @@ export default function CabBookingPage() {
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.08] text-slate-300 font-semibold">
                               👤 {cat.capacity} seats
                             </span>
->>>>>>> somya
                           </div>
                           <p className="text-xs text-slate-400 mt-0.5">{cat.description}</p>
                           <span className="text-[11px] text-emerald-400 font-bold mt-1 block">

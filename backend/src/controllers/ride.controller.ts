@@ -1,10 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Ride from '../models/Ride.model';
 import Driver from '../models/Driver.model';
-<<<<<<< HEAD
 import User from '../models/User.model';
-=======
->>>>>>> somya
 import { AppError } from '../middleware/error.middleware';
 
 // ─── Helper: Generate 4-digit OTP ──────────────────────────────────────────
@@ -12,7 +9,6 @@ const generate4DigitOTP = (): string => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
-<<<<<<< HEAD
 // ─── Pricing Rates Configuration ────────────────────────────────────────────
 export interface CategoryPricing {
   id: string;
@@ -157,16 +153,11 @@ export const calculateFareBreakdown = (
 
 // ─── 1. Estimate Fare Endpoint ──────────────────────────────────────────────
 export const estimateFare = async (
-=======
-// ─── Get Nearby Drivers (5km radius via $nearSphere with optional category) ──
-export const getNearbyDrivers = async (
->>>>>>> somya
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-<<<<<<< HEAD
     const { distanceKm, durationMin, scheduledTime } = req.body;
     const dist = Number(distanceKm) || 8.5;
     const dur = Number(durationMin) || 20;
@@ -182,7 +173,20 @@ export const getNearbyDrivers = async (
         distanceKm: dist,
         durationMin: dur,
         categories,
-=======
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Get Nearby Drivers (5km radius via $nearSphere with optional category) ──
+export const getNearbyDrivers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
     const latStr = req.query.lat as string;
     const lngStr = req.query.lng as string;
     const category = req.query.category as string; // Mini, Sedan, SUV, Premium
@@ -275,7 +279,6 @@ export const getNearbyDrivers = async (
       success: true,
       data: {
         drivers: formattedDrivers,
->>>>>>> somya
       },
     });
   } catch (error) {
@@ -283,7 +286,6 @@ export const getNearbyDrivers = async (
   }
 };
 
-<<<<<<< HEAD
 // ─── 2. Get Available Drivers for Matching ──────────────────────────────────
 export const getAvailableDrivers = async (
   req: Request,
@@ -352,9 +354,6 @@ export const getAvailableDrivers = async (
 };
 
 // ─── 3. Create Ride Request ─────────────────────────────────────────────────
-=======
-// ─── Create Ride Request ───────────────────────────────────────────────────
->>>>>>> somya
 export const createRide = async (
   req: Request,
   res: Response,
@@ -362,12 +361,12 @@ export const createRide = async (
 ) => {
   try {
     const riderId = req.user!._id;
-<<<<<<< HEAD
     const {
       pickup,
       drop,
       stops = [],
       category = 'go',
+      vehicleType,
       fare,
       fareBreakdown,
       distance = 0,
@@ -376,10 +375,8 @@ export const createRide = async (
       driverInfo,
       driverId,
       paymentMethod = 'upi',
+      status,
     } = req.body;
-=======
-    const { pickup, drop, stops, vehicleType, fare, fareBreakdown, driverId, status } = req.body;
->>>>>>> somya
 
     if (!pickup || !drop || fare === undefined) {
       return next(new AppError('Pickup location, drop location, and fare are required.', 400));
@@ -394,7 +391,6 @@ export const createRide = async (
     }
 
     const otp = generate4DigitOTP();
-
     const rideStatus = status || (driverId ? 'driver_assigned' : 'searching_driver');
 
     const ride = await Ride.create({
@@ -409,40 +405,28 @@ export const createRide = async (
         lat: drop.lat,
         lng: drop.lng,
       },
-<<<<<<< HEAD
       stops: Array.isArray(stops) ? stops : [],
-      category,
+      category: category || 'go',
+      vehicleType: vehicleType || 'Sedan',
+      driverId: driverId || null,
       fare,
       fareBreakdown: fareBreakdown || {},
       distance,
       duration,
       scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
       otp,
-      status: 'driver_assigned',
-      driverId: driverId || null,
+      status: rideStatus,
       driverInfo: driverInfo || null,
       paymentMethod,
       paymentStatus: 'pending',
-=======
-      stops: stops || [],
-      vehicleType: vehicleType || 'Sedan',
-      driverId: driverId || null,
-      fare,
-      fareBreakdown: fareBreakdown || null,
-      otp,
-      status: rideStatus,
->>>>>>> somya
     });
 
     res.status(201).json({
       success: true,
       data: {
         ride,
-<<<<<<< HEAD
         otp,
         driverInfo: driverInfo || null,
-=======
->>>>>>> somya
       },
     });
   } catch (error) {
@@ -486,11 +470,7 @@ export const verifyOTP = async (
   }
 };
 
-<<<<<<< HEAD
-// ─── 5. Update Ride Status ──────────────────────────────────────────────────
-=======
-// ─── Update Ride Status (Supports all state machine steps) ────────────────
->>>>>>> somya
+// ─── 5. Update Ride Status (Supports all state machine steps) ────────────────
 export const updateRideStatus = async (
   req: Request,
   res: Response,
@@ -498,32 +478,18 @@ export const updateRideStatus = async (
 ) => {
   try {
     const { id } = req.params;
-<<<<<<< HEAD
-    const { status, paymentStatus } = req.body;
-
-    const validStatuses = [
-      'requested',
-      'searching',
-      'accepted',
-      'driver_assigned',
-      'arriving',
-      'arrived',
-      'in_progress',
-      'completed',
-      'cancelled',
-    ];
-
-    if (!status || !validStatuses.includes(status)) {
-      return next(new AppError(`Invalid ride status. Allowed values: ${validStatuses.join(', ')}`, 400));
-=======
-    const { status, cancellationFee, updatedDrop, updatedFare } = req.body;
+    const { status, paymentStatus, cancellationFee, updatedDrop, updatedFare } = req.body;
 
     const validStates = [
       'requested',
+      'searching',
       'searching_driver',
+      'accepted',
       'driver_assigned',
       'driver_arriving',
+      'arriving',
       'driver_arrived',
+      'arrived',
       'in_progress',
       'completed',
       'cancelled',
@@ -532,7 +498,6 @@ export const updateRideStatus = async (
 
     if (!status || !validStates.includes(status)) {
       return next(new AppError(`Invalid status '${status}'. Must be one of ${validStates.join(', ')}`, 400));
->>>>>>> somya
     }
 
     const ride = await Ride.findById(id);
@@ -540,13 +505,10 @@ export const updateRideStatus = async (
       return next(new AppError('Ride not found.', 404));
     }
 
-<<<<<<< HEAD
     ride.status = status as any;
     if (paymentStatus) {
       ride.paymentStatus = paymentStatus;
     }
-=======
-    ride.status = status;
 
     if (status === 'cancelled' && cancellationFee) {
       ride.cancellationFee = cancellationFee;
@@ -560,7 +522,6 @@ export const updateRideStatus = async (
       ride.fare = updatedFare;
     }
 
->>>>>>> somya
     await ride.save();
 
     res.status(200).json({
@@ -573,11 +534,7 @@ export const updateRideStatus = async (
   }
 };
 
-<<<<<<< HEAD
-// ─── 6. Rate Ride & Driver ──────────────────────────────────────────────────
-=======
-// ─── Rate Driver & Submit Review/Tip ──────────────────────────────────────
->>>>>>> somya
+// ─── 6. Rate Driver & Submit Review/Tip/Feedback ────────────────────────────
 export const rateRide = async (
   req: Request,
   res: Response,
@@ -585,18 +542,11 @@ export const rateRide = async (
 ) => {
   try {
     const { id } = req.params;
-<<<<<<< HEAD
-    const { rating, feedbackTags = [], feedbackComment = '' } = req.body;
+    const { rating, feedbackTags = [], feedbackComment = '', comment, tip } = req.body;
 
     const numRating = Number(rating);
-    if (!numRating || numRating < 1 || numRating > 5) {
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
       return next(new AppError('Rating must be a number between 1 and 5.', 400));
-=======
-    const { rating, comment, tip } = req.body;
-
-    if (!rating || rating < 1 || rating > 5) {
-      return next(new AppError('Rating must be between 1 and 5 stars.', 400));
->>>>>>> somya
     }
 
     const ride = await Ride.findById(id);
@@ -604,21 +554,9 @@ export const rateRide = async (
       return next(new AppError('Ride not found.', 404));
     }
 
-<<<<<<< HEAD
     ride.rating = numRating;
     ride.feedbackTags = feedbackTags;
     ride.feedbackComment = feedbackComment;
-    await ride.save();
-
-    // Update Driver aggregate rating if driverId is linked
-    if (ride.driverId) {
-      const driver = await Driver.findById(ride.driverId);
-      if (driver) {
-        // Simple incremental moving average update
-        const currentRating = driver.rating || 5;
-        driver.rating = parseFloat(((currentRating * 9 + numRating) / 10).toFixed(2));
-=======
-    ride.rating = rating;
     if (comment) ride.comment = comment;
     if (tip !== undefined) ride.tip = tip;
 
@@ -630,9 +568,10 @@ export const rateRide = async (
       if (driver) {
         const completedRides = await Ride.find({ driverId: driver._id, rating: { $ne: null } });
         const totalRatingSum = completedRides.reduce((sum, r) => sum + (r.rating || 5), 0);
-        const newAvg = completedRides.length > 0 ? parseFloat((totalRatingSum / completedRides.length).toFixed(1)) : rating;
+        const newAvg = completedRides.length > 0 
+          ? parseFloat((totalRatingSum / completedRides.length).toFixed(1)) 
+          : numRating;
         driver.rating = newAvg;
->>>>>>> somya
         await driver.save();
       }
     }
@@ -640,8 +579,7 @@ export const rateRide = async (
     res.status(200).json({
       success: true,
       data: { ride },
-<<<<<<< HEAD
-      message: 'Thank you for your rating and feedback!',
+      message: 'Rating and review submitted successfully!',
     });
   } catch (error) {
     next(error);
@@ -725,12 +663,8 @@ export const getRideById = async (
     res.status(200).json({
       success: true,
       data: { ride },
-=======
-      message: 'Rating and review submitted successfully!',
->>>>>>> somya
     });
   } catch (error) {
     next(error);
   }
 };
-
