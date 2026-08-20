@@ -8,9 +8,10 @@ export interface PlaceResult {
   lat: number;
   lng: number;
   displayName?: string;
+  placeId?: string;
 }
 
-interface AddressAutocompleteProps {
+export interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onSelect: (place: PlaceResult) => void;
@@ -19,32 +20,48 @@ interface AddressAutocompleteProps {
   autoFocus?: boolean;
   onClose?: () => void;
   accentColor?: string;
+  dotColor?: string;
+  showGpsButton?: boolean;
+  hidePopularList?: boolean;
+  className?: string;
 }
 
-const POPULAR_SUGGESTIONS: PlaceResult[] = [
-  { address: 'Indira Gandhi International Airport Terminal 3, Delhi', lat: 28.5562, lng: 77.1000 },
-  { address: 'New Delhi Railway Station, Paharganj, Delhi', lat: 28.6430, lng: 77.2194 },
-  { address: 'DLF Cyber City, Building 10, Gurugram', lat: 28.4950, lng: 77.0895 },
-  { address: 'Connaught Place Inner Circle, New Delhi', lat: 28.6315, lng: 77.2167 },
-  { address: 'Select CITYWALK Mall, Saket District Centre, Delhi', lat: 28.5284, lng: 77.2185 },
-  { address: 'Sector 62 IT Park, Noida', lat: 28.6280, lng: 77.3649 },
+export const POPULAR_SUGGESTIONS: PlaceResult[] = [
+  { address: 'Kanpur Central Railway Station, Kanpur, Uttar Pradesh', lat: 26.4547, lng: 80.3507, placeId: 'knp_central' },
+  { address: 'Chaudhary Charan Singh International Airport, Lucknow, Uttar Pradesh', lat: 26.7606, lng: 80.8893, placeId: 'lko_airport' },
+  { address: 'Hazratganj Market, Lucknow, Uttar Pradesh', lat: 26.8500, lng: 80.9499, placeId: 'lko_hazratganj' },
+  { address: 'Z Square Mall, Mall Road, Kanpur, Uttar Pradesh', lat: 26.4727, lng: 80.3524, placeId: 'knp_zsquare' },
+  { address: 'Indira Gandhi International Airport Terminal 3, Delhi', lat: 28.5562, lng: 77.1000, placeId: 'del_t3' },
+  { address: 'New Delhi Railway Station, Paharganj, Delhi', lat: 28.6430, lng: 77.2194, placeId: 'del_ndls' },
+  { address: 'DLF Cyber City, Building 10, Gurugram, Haryana', lat: 28.4950, lng: 77.0895, placeId: 'ggn_cyber' },
+  { address: 'Connaught Place Inner Circle, New Delhi', lat: 28.6315, lng: 77.2167, placeId: 'del_cp' },
+  { address: 'Select CITYWALK Mall, Saket District Centre, Delhi', lat: 28.5284, lng: 77.2185, placeId: 'del_saket' },
+  { address: 'Sector 62 IT Park, Noida, Uttar Pradesh', lat: 28.6280, lng: 77.3649, placeId: 'noi_sec62' },
+  { address: 'Kempegowda International Airport, Bengaluru, Karnataka', lat: 13.1986, lng: 77.7066, placeId: 'blr_airport' },
+  { address: 'Chhatrapati Shivaji Maharaj International Airport T2, Mumbai', lat: 19.0896, lng: 72.8656, placeId: 'bom_t2' },
 ];
 
 export default function AddressAutocomplete({
   value,
   onChange,
   onSelect,
-  placeholder = 'Search destination, airport, station...',
-  label = 'Where to?',
+  placeholder = 'Search location, airport, station...',
+  label,
   autoFocus = false,
   onClose,
   accentColor = '#00C2B3',
+  dotColor,
+  showGpsButton = false,
+  hidePopularList = false,
+  className = '',
 }: AddressAutocompleteProps) {
   const [query, setQuery] = useState(value || '');
   const [results, setResults] = useState<PlaceResult[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [recents, setRecents] = useState<PlaceResult[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync internal query state with external value changes
@@ -70,9 +87,20 @@ export default function AddressAutocomplete({
     }
   }, [autoFocus]);
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Debounced search against OpenStreetMap Nominatim
   useEffect(() => {
-    if (!query || query.trim().length < 3) {
+    if (!query || query.trim().length < 2) {
       setResults([]);
       setLoading(false);
       return;
@@ -94,29 +122,42 @@ export default function AddressAutocomplete({
 
         if (response.ok) {
           const data = await response.json();
-          const mapped: PlaceResult[] = data.map((item: any) => ({
-            address: item.display_name.split(',').slice(0, 3).join(','),
-            displayName: item.display_name,
-            lat: parseFloat(item.lat),
-            lng: parseFloat(item.lon),
-          }));
-          setResults(mapped);
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped: PlaceResult[] = data.map((item: any) => ({
+              address: item.display_name.split(',').slice(0, 3).join(',').trim(),
+              displayName: item.display_name,
+              lat: parseFloat(item.lat),
+              lng: parseFloat(item.lon),
+              placeId: String(item.place_id || item.osm_id || Math.random()),
+            }));
+            setResults(mapped);
+            setIsOpen(true);
+          } else {
+            // Local fallback filter
+            const fallback = POPULAR_SUGGESTIONS.filter((s) =>
+              s.address.toLowerCase().includes(query.toLowerCase())
+            );
+            setResults(fallback);
+            setIsOpen(fallback.length > 0);
+          }
         } else {
           // Local fallback filter
           const fallback = POPULAR_SUGGESTIONS.filter((s) =>
             s.address.toLowerCase().includes(query.toLowerCase())
           );
           setResults(fallback);
+          setIsOpen(fallback.length > 0);
         }
       } catch {
         const fallback = POPULAR_SUGGESTIONS.filter((s) =>
           s.address.toLowerCase().includes(query.toLowerCase())
         );
         setResults(fallback);
+        setIsOpen(fallback.length > 0);
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 280);
 
     return () => clearTimeout(handler);
   }, [query]);
@@ -134,6 +175,7 @@ export default function AddressAutocomplete({
 
     setQuery(place.address);
     setResults([]);
+    setIsOpen(false);
     onChange(place.address);
     onSelect(place);
   };
@@ -159,27 +201,30 @@ export default function AddressAutocomplete({
           if (res.ok) {
             const data = await res.json();
             const address = data.display_name
-              ? data.display_name.split(',').slice(0, 3).join(',')
+              ? data.display_name.split(',').slice(0, 3).join(',').trim()
               : `Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
             const currentPlace: PlaceResult = {
               address,
               lat,
               lng,
               displayName: data.display_name,
+              placeId: 'current_gps',
             };
             handleSelectPlace(currentPlace);
           } else {
             handleSelectPlace({
-              address: 'Current Location (Connaught Place, New Delhi)',
-              lat: 28.6315,
-              lng: 77.2167,
+              address: 'Current Location (GPS Verified)',
+              lat,
+              lng,
+              placeId: 'current_gps',
             });
           }
         } catch {
           handleSelectPlace({
-            address: 'Current Location (Connaught Place, New Delhi)',
-            lat: 28.6315,
-            lng: 77.2167,
+            address: 'Current Location (GPS Verified)',
+            lat,
+            lng,
+            placeId: 'current_gps',
           });
         } finally {
           setLocating(false);
@@ -191,6 +236,7 @@ export default function AddressAutocomplete({
           address: 'Connaught Place Inner Circle, New Delhi',
           lat: 28.6315,
           lng: 77.2167,
+          placeId: 'del_cp',
         });
         setLocating(false);
       },
@@ -199,40 +245,71 @@ export default function AddressAutocomplete({
   };
 
   return (
-    <div className="w-full space-y-3 animate-fadeIn">
-      {/* Search Header */}
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-bold uppercase tracking-wider text-[#526174] dark:text-slate-400 flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#00C2B3]" />
-          {label}
-        </label>
-        <button
-          type="button"
-          onClick={handleUseCurrentLocation}
-          disabled={locating}
-          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00A99D] hover:underline"
-        >
-          {locating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crosshair className="w-3 h-3" />}
-          Use Current Location
-        </button>
-      </div>
+    <div ref={containerRef} className={`w-full relative ${className}`}>
+      {/* Label and GPS Action Header */}
+      {(label || showGpsButton) && (
+        <div className="flex items-center justify-between mb-1.5">
+          {label && (
+            <label className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
+              {dotColor ? (
+                <span
+                  className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-sm"
+                  style={{ backgroundColor: dotColor }}
+                />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 text-primary-400" />
+              )}
+              <span>{label}</span>
+            </label>
+          )}
 
-      {/* Search Input Box */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8995A5]" />
+          {showGpsButton && (
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              disabled={locating}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00A99D] hover:underline cursor-pointer disabled:opacity-50"
+            >
+              {locating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Crosshair className="w-3 h-3" />
+              )}
+              <span>Use Current Location</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Input Field Container */}
+      <div className="relative group">
+        <MapPin
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 shrink-0 transition-colors pointer-events-none"
+          style={{ color: dotColor || accentColor }}
+        />
+
         <input
           ref={inputRef}
           type="text"
           value={query}
+          onFocus={() => {
+            if (query.trim().length >= 2 || recents.length > 0) {
+              setIsOpen(true);
+            }
+          }}
           onChange={(e) => {
-            setQuery(e.target.value);
-            onChange(e.target.value);
+            const val = e.target.value;
+            setQuery(val);
+            onChange(val);
+            setIsOpen(true);
           }}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-3 rounded-2xl bg-[#F7F9FC] dark:bg-[#10243A] border border-[#E5EAF0] dark:border-[#17334F] text-xs sm:text-sm font-semibold text-[#0B1728] dark:text-white placeholder:text-[#8995A5] focus:outline-none focus:border-[#00C2B3] focus:ring-1 focus:ring-[#00C2B3] transition-all"
+          className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/[0.04] dark:bg-[#10243A]/80 border border-white/[0.08] dark:border-[#17334F] text-xs sm:text-sm font-semibold text-white dark:text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/60 dark:focus:border-primary-400 focus:ring-1 focus:ring-blue-500/40 transition-all shadow-inner"
         />
+
+        {/* Clear / Loading Indicator */}
         {loading ? (
-          <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00C2B3] animate-spin" />
+          <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 animate-spin pointer-events-none" />
         ) : query ? (
           <button
             type="button"
@@ -240,91 +317,119 @@ export default function AddressAutocomplete({
               setQuery('');
               onChange('');
               setResults([]);
+              setIsOpen(false);
+              inputRef.current?.focus();
             }}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8995A5] hover:text-[#0B1728] dark:hover:text-white"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors p-0.5 rounded-lg hover:bg-white/10"
+            aria-label="Clear input"
           >
             <X className="w-4 h-4" />
           </button>
         ) : null}
       </div>
 
-      {/* Autocomplete Results */}
-      {results.length > 0 && (
-        <div className="space-y-1 p-2 rounded-2xl bg-[#FFFFFF] dark:bg-[#0F172A] border border-[#00C2B3]/30 shadow-xl z-20 relative">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#00A99D] px-3 py-1">
-            Search Results
-          </p>
-          {results.map((res, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleSelectPlace(res)}
-              className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#F0FCFB] dark:hover:bg-[#10243A] text-left transition-colors group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-[#00C2B3]/10 border border-[#00C2B3]/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
-                <MapPin className="w-4 h-4 text-[#00A99D]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-[#0B1728] dark:text-white group-hover:text-[#00A99D] transition-colors truncate">
-                  {res.address}
-                </p>
-                {res.displayName && (
-                  <p className="text-[10px] text-[#526174] dark:text-slate-400 truncate mt-0.5">
-                    {res.displayName}
-                  </p>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Recent Searches */}
-      {results.length === 0 && recents.length > 0 && (
-        <div className="space-y-1.5 pt-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8995A5] flex items-center gap-1 px-1">
-            <Clock className="w-3 h-3" /> Recent Searches
-          </p>
-          <div className="space-y-1">
-            {recents.map((item, i) => (
+      {/* Floating Suggestions Dropdown */}
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1.5 p-2 rounded-2xl bg-[#0B101E]/95 dark:bg-[#0B1728]/95 backdrop-blur-xl border border-blue-500/30 dark:border-[#17334F] shadow-2xl z-50 max-h-[280px] overflow-y-auto space-y-1 scrollbar-hide animate-fadeIn">
+          {/* Real Autocomplete Results */}
+          {results.length > 0 ? (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400 px-3 py-1">
+                Matched Locations
+              </p>
+              {results.map((res, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSelectPlace(res)}
+                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.08] dark:hover:bg-[#17334F] text-left transition-all group cursor-pointer"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                    <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors truncate">
+                      {res.address}
+                    </p>
+                    {res.displayName && (
+                      <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                        {res.displayName}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : query.trim().length >= 2 && !loading ? (
+            <div className="p-3 text-center">
+              <p className="text-xs text-slate-400">No exact matches found for "{query}"</p>
               <button
-                key={i}
                 type="button"
-                onClick={() => handleSelectPlace(item)}
-                className="w-full flex items-center gap-3 p-2 rounded-xl bg-[#F7F9FC] dark:bg-[#10243A] hover:bg-[#F1F5F8] border border-[#E5EAF0] dark:border-[#17334F] text-left transition-colors"
+                onClick={() => {
+                  // Fallback custom location
+                  handleSelectPlace({
+                    address: query.trim(),
+                    lat: 28.6139,
+                    lng: 77.2090,
+                    placeId: `custom_${Date.now()}`,
+                  });
+                }}
+                className="mt-2 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all inline-flex items-center gap-1.5"
               >
-                <Clock className="w-3.5 h-3.5 text-[#8995A5] shrink-0" />
-                <span className="text-xs text-[#0B1728] dark:text-slate-300 truncate font-semibold">{item.address}</span>
+                <MapPin className="w-3 h-3" />
+                Use "{query.trim()}" as custom location
               </button>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          ) : null}
 
-      {/* Popular Suggestions */}
-      {results.length === 0 && (
-        <div className="space-y-1.5 pt-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8995A5] flex items-center gap-1 px-1">
-            <Navigation className="w-3 h-3" /> Popular Points of Interest
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {POPULAR_SUGGESTIONS.map((item, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => handleSelectPlace(item)}
-                className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#F7F9FC] dark:bg-[#10243A] hover:bg-[#F0FCFB] dark:hover:bg-[#17334F] border border-[#E5EAF0] dark:border-[#17334F] text-left transition-colors group"
-              >
-                <MapPin className="w-3.5 h-3.5 text-[#00A99D] shrink-0 group-hover:scale-110 transition-transform" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-[#0B1728] dark:text-slate-200 group-hover:text-[#00A99D] truncate">
-                    {item.address.split(',')[0]}
-                  </p>
-                  <p className="text-[10px] text-[#526174] dark:text-slate-400 truncate">{item.address.split(',')[1] || 'Delhi NCR'}</p>
-                </div>
-              </button>
-            ))}
-          </div>
+          {/* Recent Searches */}
+          {results.length === 0 && recents.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 px-3 py-1">
+                <Clock className="w-3 h-3 text-slate-500" /> Recent Places
+              </p>
+              {recents.map((item, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSelectPlace(item)}
+                  className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span className="text-xs text-slate-300 truncate font-medium">{item.address}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Popular Landmark Suggestions */}
+          {!hidePopularList && results.length === 0 && (
+            <div className="pt-1 border-t border-white/[0.06]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 px-3 py-1">
+                <Navigation className="w-3 h-3 text-slate-500" /> Top Points of Interest
+              </p>
+              <div className="grid grid-cols-1 gap-1">
+                {POPULAR_SUGGESTIONS.slice(0, 5).map((item, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSelectPlace(item)}
+                    className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors group cursor-pointer"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-primary-400 shrink-0 group-hover:scale-110 transition-transform" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-white group-hover:text-primary-300 truncate">
+                        {item.address.split(',')[0]}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {item.address.split(',').slice(1).join(',').trim()}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

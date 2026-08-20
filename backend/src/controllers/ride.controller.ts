@@ -11,7 +11,7 @@ const generate4DigitOTP = (): string => {
 
 // ─── Pricing Rates Configuration ────────────────────────────────────────────
 export interface CategoryPricing {
-  id: 'go' | 'comfort' | 'xl';
+  id: string;
   name: string;
   categoryName: string;
   vehicleModel: string;
@@ -25,43 +25,56 @@ export interface CategoryPricing {
 }
 
 export const CATEGORY_PRICING: Record<string, CategoryPricing> = {
-  go: {
-    id: 'go',
-    name: 'VITO Go',
-    categoryName: 'Sedan / Hatchback',
-    vehicleModel: 'Maruti Dzire / WagonR',
+  mini: {
+    id: 'mini',
+    name: 'Mini',
+    categoryName: 'Compact Hatchback',
+    vehicleModel: 'Maruti Alto / WagonR',
     seats: 4,
-    baseFare: 50,
-    perKmRate: 14,
-    perMinRate: 1.5,
-    bookingFee: 20,
-    description: 'Affordable, compact rides for everyday travel',
+    baseFare: 40,
+    perKmRate: 12,
+    perMinRate: 1.2,
+    bookingFee: 15,
+    description: 'Affordable, compact rides for everyday city travel',
     icon: 'car',
   },
-  comfort: {
-    id: 'comfort',
-    name: 'VITO Comfort',
-    categoryName: 'Premium Sedan',
+  sedan: {
+    id: 'sedan',
+    name: 'Sedan',
+    categoryName: 'Comfortable Sedan',
+    vehicleModel: 'Maruti Dzire / Honda Amaze',
+    seats: 4,
+    baseFare: 60,
+    perKmRate: 15,
+    perMinRate: 1.6,
+    bookingFee: 20,
+    description: 'Comfortable, AC sedans with extra legroom & boot space',
+    icon: 'car',
+  },
+  xcar: {
+    id: 'xcar',
+    name: 'XCar',
+    categoryName: 'Premium Executive',
     vehicleModel: 'Honda City / Hyundai Verna',
     seats: 4,
-    baseFare: 80,
-    perKmRate: 18,
-    perMinRate: 2.0,
+    baseFare: 90,
+    perKmRate: 19,
+    perMinRate: 2.2,
     bookingFee: 25,
-    description: 'Top-rated drivers & newer, spacious sedans',
+    description: 'Top-rated drivers & executive premium sedans',
     icon: 'sparkles',
   },
-  xl: {
-    id: 'xl',
-    name: 'VITO XL',
-    categoryName: 'Spacious SUV',
-    vehicleModel: 'Toyota Innova / Ertiga',
+  suv: {
+    id: 'suv',
+    name: 'SUV',
+    categoryName: 'Spacious 6-Seater SUV',
+    vehicleModel: 'Toyota Innova / Maruti Ertiga',
     seats: 6,
-    baseFare: 120,
+    baseFare: 130,
     perKmRate: 24,
     perMinRate: 3.0,
     bookingFee: 35,
-    description: 'Extra room for groups & family with luggage',
+    description: 'Extra room for groups & family with heavy luggage',
     icon: 'users',
   },
 };
@@ -92,7 +105,15 @@ export const calculateFareBreakdown = (
   durationMin: number,
   scheduledTime?: Date | null
 ) => {
-  const config = CATEGORY_PRICING[categoryKey.toLowerCase()] || CATEGORY_PRICING.go;
+  const key = categoryKey.toLowerCase();
+  // Map aliases like 'go' -> 'sedan', 'comfort' -> 'xcar', 'xl' -> 'suv'
+  const aliasMap: Record<string, string> = {
+    go: 'mini',
+    comfort: 'xcar',
+    xl: 'suv',
+  };
+  const resolvedKey = aliasMap[key] || key;
+  const config = CATEGORY_PRICING[resolvedKey] || CATEGORY_PRICING.sedan;
   const surge = getSurgeMultiplier(scheduledTime || new Date());
 
   const distanceCharge = Math.round(distanceKm * config.perKmRate);
@@ -109,6 +130,7 @@ export const calculateFareBreakdown = (
   const maxRange = Math.round(total * 1.05);
 
   return {
+    id: config.id,
     category: config.id,
     name: config.name,
     categoryName: config.categoryName,

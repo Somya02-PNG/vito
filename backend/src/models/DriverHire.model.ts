@@ -30,6 +30,18 @@ export interface IDriverHire extends Document {
   driverAvatar?: string;
   driverRating?: number;
   serviceType: 'hourly' | 'full_day' | 'outstation' | 'airport' | 'event';
+  tripType?: 'ONE_WAY' | 'ROUND_TRIP' | string;
+  outboundDistanceKm?: number;
+  outboundDurationStr?: string;
+  returnDistanceKm?: number;
+  returnDurationStr?: string;
+  expectedStayDurationHours?: number;
+  totalDrivingDistanceKm?: number;
+  totalDrivingDurationStr?: string;
+  totalDriverCommitmentHours?: number;
+  isFlexibleRoundTrip?: boolean;
+  estimatedEarnings?: number;
+  timeline?: any;
   hourlyRate: number;
   pickupLocation: string;
   approximatePickupArea?: string;
@@ -167,6 +179,22 @@ const DriverHireSchema = new Schema<IDriverHire>(
       type: Number,
       default: 1,
     },
+    tripType: {
+      type: String,
+      enum: ['ONE_WAY', 'ROUND_TRIP', 'one_way', 'round_trip', 'One Way', 'Round Trip'],
+      default: 'ONE_WAY',
+    },
+    outboundDistanceKm: { type: Number },
+    outboundDurationStr: { type: String },
+    returnDistanceKm: { type: Number },
+    returnDurationStr: { type: String },
+    expectedStayDurationHours: { type: Number },
+    totalDrivingDistanceKm: { type: Number },
+    totalDrivingDurationStr: { type: String },
+    totalDriverCommitmentHours: { type: Number },
+    isFlexibleRoundTrip: { type: Boolean, default: false },
+    estimatedEarnings: { type: Number },
+    timeline: { type: Schema.Types.Mixed },
     returnRequired: {
       type: Boolean,
       default: true,

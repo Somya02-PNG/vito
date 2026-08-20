@@ -18,6 +18,7 @@ import paymentRoutes from './routes/payment.routes';
 import seedRoutes from './routes/seed.routes';
 import partnerRoutes from './routes/partner.routes';
 import rentalBookingRoutes from './routes/rentalBooking.routes';
+import customerVehicleRoutes from './routes/customerVehicle.routes';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 
 dotenv.config();
@@ -60,6 +61,8 @@ app.use('/api', paymentRoutes);
 app.use('/api', seedRoutes);
 app.use('/api', partnerRoutes);
 app.use('/api/rental', rentalBookingRoutes);
+app.use('/api/customer', customerVehicleRoutes);
+app.use('/api', customerVehicleRoutes);
 
 // Root Endpoint
 app.get('/', (req: Request, res: Response) => {

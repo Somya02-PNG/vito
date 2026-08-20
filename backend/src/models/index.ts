@@ -24,3 +24,6 @@ export type { IExpense, ExpenseCategory, SplitType } from './Expense.model';
 
 export { default as EmergencyContact } from './EmergencyContact.model';
 export type { IEmergencyContact } from './EmergencyContact.model';
+
+export { default as CustomerVehicle } from './CustomerVehicle.model';
+export type { ICustomerVehicle, ICustomerVehicleDocument, CustomerVehicleVerificationStatus } from './CustomerVehicle.model';

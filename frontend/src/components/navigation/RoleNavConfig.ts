@@ -38,6 +38,7 @@ import {
   ShieldAlert,
   PhoneCall,
   Share2,
+  FileCheck,
 } from 'lucide-react';
 
 export type RoleType = 'customer' | 'driver' | 'partner' | 'admin';
@@ -195,12 +196,6 @@ export const ROLE_NAV_CONFIGS: Record<RoleType, RoleNavConfig> = {
             label: 'Safety Center',
             href: '/customer/safety',
             icon: Shield,
-            subItems: [
-              { label: 'Emergency SOS', href: '/customer/safety?tab=sos' },
-              { label: 'Trusted Contacts', href: '/customer/safety?tab=contacts' },
-              { label: 'Share Live Trip', href: '/customer/safety?tab=share' },
-              { label: 'Safety Preferences', href: '/customer/safety?tab=preferences' },
-            ],
           },
         ],
       },
@@ -241,33 +236,25 @@ export const ROLE_NAV_CONFIGS: Record<RoleType, RoleNavConfig> = {
         items: [
           { label: 'Overview', href: '/driver/home', icon: LayoutDashboard },
           { label: 'Requests', href: '/driver/requests', icon: Radio, badge: 'Live' },
-        ],
-      },
-      {
-        id: 'trips',
-        title: 'Work & Earnings',
-        items: [
           { label: 'My Trips', href: '/driver/trips', icon: Navigation },
-          { label: 'Earnings', href: '/driver/earnings', icon: Wallet },
-          { label: 'Availability', href: '/driver/availability', icon: Clock },
         ],
       },
       {
-        id: 'driver_safety',
-        title: 'Safety & Profile',
+        id: 'earnings_section',
+        title: 'Earnings & Metrics',
         items: [
-          {
-            label: 'Safety Center',
-            href: '/driver/safety',
-            icon: Shield,
-            subItems: [
-              { label: 'Emergency SOS', href: '/driver/safety?tab=sos' },
-              { label: 'Safety Guidelines', href: '/driver/safety?tab=guidelines' },
-              { label: 'Incident Report', href: '/driver/safety?tab=report' },
-            ],
-          },
-          { label: 'Driver Profile', href: '/driver/profile', icon: UserCircle },
-          { label: 'Settings', href: '/driver/settings', icon: SettingsIcon },
+          { label: 'Earnings & Wallet', href: '/driver/earnings', icon: Wallet },
+          { label: 'Performance', href: '/driver/performance', icon: BarChart3 },
+        ],
+      },
+      {
+        id: 'driver_trust',
+        title: 'Trust & Vehicle',
+        items: [
+          { label: 'Safety Center', href: '/driver/safety', icon: Shield },
+          { label: 'Documents', href: '/driver/documents', icon: FileCheck || ShieldAlert },
+          { label: 'Vehicle Profile', href: '/driver/vehicle', icon: Car },
+          { label: 'Account Profile', href: '/driver/profile', icon: UserCircle },
         ],
       },
     ],

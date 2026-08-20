@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { fetchAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  ArrowUpDown,
   RotateCcw,
   Sparkles,
   Zap,
@@ -31,6 +32,7 @@ import {
   Calendar,
   CreditCard,
   Wallet,
+  Banknote,
   Share2,
   MessageSquare,
   BadgeCheck,
@@ -42,7 +44,7 @@ import {
   FileText,
   AlertCircle,
 } from 'lucide-react';
-import AddressAutocomplete, { PlaceResult } from '@/components/AddressAutocomplete';
+import AddressAutocomplete, { PlaceResult, POPULAR_SUGGESTIONS } from '@/components/AddressAutocomplete';
 import MockPaymentModal from '@/components/MockPaymentModal';
 
 // Dynamic import for Leaflet map to prevent SSR issues
@@ -73,7 +75,8 @@ export interface LocationPoint {
 }
 
 export interface CategoryOption {
-  id: 'go' | 'comfort' | 'xl';
+  id: string;
+  category?: string;
   name: string;
   categoryName: string;
   vehicleModel: string;
@@ -135,7 +138,11 @@ export default function CabBookingFlow() {
   // Locations
   const [pickup, setPickup] = useState<LocationPoint>(DEFAULT_PICKUP);
   const [drop, setDrop] = useState<LocationPoint | null>(null);
+  const [pickupInput, setPickupInput] = useState<string>(DEFAULT_PICKUP.address);
+  const [dropInput, setDropInput] = useState<string>('');
   const [stops, setStops] = useState<LocationPoint[]>([]);
+
+  const searchParams = useSearchParams();
 
   // Ride Scheduling
   const [rideTiming, setRideTiming] = useState<'now' | 'later'>('now');
@@ -149,7 +156,7 @@ export default function CabBookingFlow() {
 
   // Vehicle Categories & Pricing
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<'go' | 'comfort' | 'xl'>('go');
+  const [selectedCabId, setSelectedCabId] = useState<string | null>(null);
   const [showFareBreakdownModal, setShowFareBreakdownModal] = useState(false);
 
   // Payment
@@ -186,11 +193,13 @@ export default function CabBookingFlow() {
     if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setPickup({
+          const currentPt = {
             address: 'Current Location (GPS Verified)',
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
-          });
+          };
+          setPickup(currentPt);
+          setPickupInput('Current Location (GPS Verified)');
         },
         () => {
           // Keep default CP coordinates
@@ -212,80 +221,105 @@ export default function CabBookingFlow() {
         },
       });
 
-      if (res.data?.categories) {
-        setCategories(res.data.categories);
+      if (res.data?.categories && Array.isArray(res.data.categories) && res.data.categories.length > 0) {
+        const sanitized: CategoryOption[] = res.data.categories.map((c: any, index: number) => ({
+          ...c,
+          id: String(c.id || c.category || `cab_${index}`),
+        }));
+        setCategories(sanitized);
+        return;
       }
     } catch {
       // Offline fallback calculation
-      const fallbackCats: CategoryOption[] = [
-        {
-          id: 'go',
-          name: 'VITO Go',
-          categoryName: 'Sedan / Hatchback',
-          vehicleModel: 'Maruti Dzire / WagonR',
-          seats: 4,
-          baseFare: 50,
-          distanceCharge: Math.round(dist * 14),
-          timeCharge: Math.round(dur * 1.5),
-          surgeMultiplier: 1.0,
-          surgeLabel: 'Standard Rate',
-          surgeAmount: 0,
-          bookingFee: 20,
-          taxes: Math.round((50 + dist * 14 + dur * 1.5 + 20) * 0.05),
-          total: Math.round((50 + dist * 14 + dur * 1.5 + 20) * 1.05),
-          fareRange: `₹${Math.round((50 + dist * 14 + dur * 1.5 + 20) * 1.0)}–₹${Math.round((50 + dist * 14 + dur * 1.5 + 20) * 1.1)}`,
-          eta: '2 mins',
-          description: 'Affordable, compact rides for everyday travel',
-          icon: 'car',
-        },
-        {
-          id: 'comfort',
-          name: 'VITO Comfort',
-          categoryName: 'Premium Sedan',
-          vehicleModel: 'Honda City / Hyundai Verna',
-          seats: 4,
-          baseFare: 80,
-          distanceCharge: Math.round(dist * 18),
-          timeCharge: Math.round(dur * 2.0),
-          surgeMultiplier: 1.0,
-          surgeLabel: 'Standard Rate',
-          surgeAmount: 0,
-          bookingFee: 25,
-          taxes: Math.round((80 + dist * 18 + dur * 2.0 + 25) * 0.05),
-          total: Math.round((80 + dist * 18 + dur * 2.0 + 25) * 1.05),
-          fareRange: `₹${Math.round((80 + dist * 18 + dur * 2.0 + 25) * 1.0)}–₹${Math.round((80 + dist * 18 + dur * 2.0 + 25) * 1.1)}`,
-          eta: '3 mins',
-          description: 'Top-rated drivers & newer, spacious sedans',
-          icon: 'sparkles',
-        },
-        {
-          id: 'xl',
-          name: 'VITO XL',
-          categoryName: 'Spacious SUV',
-          vehicleModel: 'Toyota Innova / Ertiga',
-          seats: 6,
-          baseFare: 120,
-          distanceCharge: Math.round(dist * 24),
-          timeCharge: Math.round(dur * 3.0),
-          surgeMultiplier: 1.0,
-          surgeLabel: 'Standard Rate',
-          surgeAmount: 0,
-          bookingFee: 35,
-          taxes: Math.round((120 + dist * 24 + dur * 3.0 + 35) * 0.05),
-          total: Math.round((120 + dist * 24 + dur * 3.0 + 35) * 1.05),
-          fareRange: `₹${Math.round((120 + dist * 24 + dur * 3.0 + 35) * 1.0)}–₹${Math.round((120 + dist * 24 + dur * 3.0 + 35) * 1.1)}`,
-          eta: '5 mins',
-          description: 'Extra room for groups & family with luggage',
-          icon: 'users',
-        },
-      ];
-      setCategories(fallbackCats);
     }
+
+    const fallbackCats: CategoryOption[] = [
+      {
+        id: 'mini',
+        name: 'Mini',
+        categoryName: 'Compact Hatchback',
+        vehicleModel: 'Maruti Alto / WagonR',
+        seats: 4,
+        baseFare: 40,
+        distanceCharge: Math.round(dist * 12),
+        timeCharge: Math.round(dur * 1.2),
+        surgeMultiplier: 1.0,
+        surgeLabel: 'Standard Rate',
+        surgeAmount: 0,
+        bookingFee: 15,
+        taxes: Math.round((40 + dist * 12 + dur * 1.2 + 15) * 0.05),
+        total: Math.round((40 + dist * 12 + dur * 1.2 + 15) * 1.05),
+        fareRange: `₹${Math.round((40 + dist * 12 + dur * 1.2 + 15) * 0.95)}–₹${Math.round((40 + dist * 12 + dur * 1.2 + 15) * 1.05)}`,
+        eta: '2 mins',
+        description: 'Affordable, compact rides for everyday city travel',
+        icon: 'car',
+      },
+      {
+        id: 'sedan',
+        name: 'Sedan',
+        categoryName: 'Comfortable Sedan',
+        vehicleModel: 'Maruti Dzire / Honda Amaze',
+        seats: 4,
+        baseFare: 60,
+        distanceCharge: Math.round(dist * 15),
+        timeCharge: Math.round(dur * 1.6),
+        surgeMultiplier: 1.0,
+        surgeLabel: 'Standard Rate',
+        surgeAmount: 0,
+        bookingFee: 20,
+        taxes: Math.round((60 + dist * 15 + dur * 1.6 + 20) * 0.05),
+        total: Math.round((60 + dist * 15 + dur * 1.6 + 20) * 1.05),
+        fareRange: `₹${Math.round((60 + dist * 15 + dur * 1.6 + 20) * 0.95)}–₹${Math.round((60 + dist * 15 + dur * 1.6 + 20) * 1.05)}`,
+        eta: '3 mins',
+        description: 'Comfortable, AC sedans with extra legroom & boot space',
+        icon: 'car',
+      },
+      {
+        id: 'xcar',
+        name: 'XCar',
+        categoryName: 'Premium Executive',
+        vehicleModel: 'Honda City / Hyundai Verna',
+        seats: 4,
+        baseFare: 90,
+        distanceCharge: Math.round(dist * 19),
+        timeCharge: Math.round(dur * 2.2),
+        surgeMultiplier: 1.0,
+        surgeLabel: 'Standard Rate',
+        surgeAmount: 0,
+        bookingFee: 25,
+        taxes: Math.round((90 + dist * 19 + dur * 2.2 + 25) * 0.05),
+        total: Math.round((90 + dist * 19 + dur * 2.2 + 25) * 1.05),
+        fareRange: `₹${Math.round((90 + dist * 19 + dur * 2.2 + 25) * 0.95)}–₹${Math.round((90 + dist * 19 + dur * 2.2 + 25) * 1.05)}`,
+        eta: '4 mins',
+        description: 'Top-rated drivers & executive premium sedans',
+        icon: 'sparkles',
+      },
+      {
+        id: 'suv',
+        name: 'SUV',
+        categoryName: 'Spacious 6-Seater SUV',
+        vehicleModel: 'Toyota Innova / Maruti Ertiga',
+        seats: 6,
+        baseFare: 130,
+        distanceCharge: Math.round(dist * 24),
+        timeCharge: Math.round(dur * 3.0),
+        surgeMultiplier: 1.0,
+        surgeLabel: 'Standard Rate',
+        surgeAmount: 0,
+        bookingFee: 35,
+        taxes: Math.round((130 + dist * 24 + dur * 3.0 + 35) * 0.05),
+        total: Math.round((130 + dist * 24 + dur * 3.0 + 35) * 1.05),
+        fareRange: `₹${Math.round((130 + dist * 24 + dur * 3.0 + 35) * 0.95)}–₹${Math.round((130 + dist * 24 + dur * 3.0 + 35) * 1.05)}`,
+        eta: '5 mins',
+        description: 'Extra room for groups & family with heavy luggage',
+        icon: 'users',
+      },
+    ];
+    setCategories(fallbackCats);
   }, [rideTiming, scheduledDate, scheduledTime]);
 
   // ─── 3. Compute Route Polyline & Distance ───────────────────────────────────
   const calculateRoute = useCallback(async (start: LocationPoint, end: LocationPoint, viaStops: LocationPoint[] = []) => {
-    // Generate smooth bezier points as default fallback
     const waypoints: LocationPoint[] = [start, ...viaStops, end];
     const points: [number, number][] = [];
 
@@ -303,29 +337,87 @@ export default function CabBookingFlow() {
 
     setRoutePolyline(points);
 
-    // Approximate distance
-    const totalDist = Math.max(
-      3.2,
-      parseFloat(
-        (
-          Math.sqrt(
-            Math.pow(end.lat - start.lat, 2) + Math.pow(end.lng - start.lng, 2)
-          ) * 111 * 1.35
-        ).toFixed(1)
-      )
-    );
-    const totalDur = Math.max(8, Math.round(totalDist * 2.1));
+    // Compute Haversine distance with road factor across all legs
+    let totalKm = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const pA = waypoints[i];
+      const pB = waypoints[i + 1];
+      const dLat = ((pB.lat - pA.lat) * Math.PI) / 180;
+      const dLon = ((pB.lng - pA.lng) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((pA.lat * Math.PI) / 180) * Math.cos((pB.lat * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      totalKm += 6371 * c * 1.28;
+    }
+
+    const totalDist = Math.max(1.5, parseFloat(totalKm.toFixed(1)));
+    const totalDur = Math.max(5, Math.round((totalDist / 32) * 60 + 5));
 
     setDistanceKm(totalDist);
     setDurationMin(totalDur);
     fetchFareEstimate(totalDist, totalDur);
   }, [fetchFareEstimate]);
 
+  // Read URL Search Params (e.g. ?drop=... or ?pickup=...) on mount
+  useEffect(() => {
+    if (!searchParams) return;
+    const dropParam = searchParams.get('drop');
+    const pickupParam = searchParams.get('pickup');
+
+    let currentPickup = pickup;
+    if (pickupParam) {
+      const matched = POPULAR_SUGGESTIONS.find((s) => s.address.toLowerCase().includes(pickupParam.toLowerCase()));
+      const pt: LocationPoint = matched || { address: pickupParam, lat: 28.6315, lng: 77.2167 };
+      currentPickup = pt;
+      setPickup(pt);
+      setPickupInput(pt.address);
+    }
+
+    if (dropParam) {
+      const matched = POPULAR_SUGGESTIONS.find((s) => s.address.toLowerCase().includes(dropParam.toLowerCase()));
+      const pt: LocationPoint = matched || { address: dropParam, lat: 28.5562, lng: 77.1000 };
+      setDrop(pt);
+      setDropInput(pt.address);
+      calculateRoute(currentPickup, pt, stops);
+    }
+  }, [searchParams, calculateRoute]);
+
+  // Swap Locations Handler (↕)
+  const handleSwapLocations = () => {
+    if (!drop) return;
+    const oldPickup = { ...pickup };
+    const oldDrop = { ...drop };
+    const oldPickupInput = pickupInput;
+    const oldDropInput = dropInput;
+
+    setPickup(oldDrop);
+    setPickupInput(oldDropInput || oldDrop.address);
+    setDrop(oldPickup);
+    setDropInput(oldPickupInput || oldPickup.address);
+    calculateRoute(oldDrop, oldPickup, stops);
+  };
+
+  // Validation
+  const isSameLocation = useMemo(() => {
+    if (!pickup || !drop) return false;
+    if (pickup.address.trim().toLowerCase() === drop.address.trim().toLowerCase()) return true;
+    if (Math.abs(pickup.lat - drop.lat) < 0.0005 && Math.abs(pickup.lng - drop.lng) < 0.0005) return true;
+    return false;
+  }, [pickup, drop]);
+
+  const isLocationValid = Boolean(
+    pickup && pickup.address.trim() &&
+    drop && drop.address.trim() &&
+    !isSameLocation
+  );
+
   // ─── 4. Query Available Drivers on Screen 4+ ────────────────────────────────
   const loadDrivers = useCallback(async () => {
     try {
+      const activeCat = selectedCabId || 'sedan';
       const res = await fetchAPI<{ drivers: MatchedDriver[] }>(
-        `/api/rides/available-drivers?lat=${pickup.lat}&lng=${pickup.lng}&category=${selectedCategory}`
+        `/api/rides/available-drivers?lat=${pickup.lat}&lng=${pickup.lng}&category=${activeCat}`
       );
       if (res.data?.drivers && res.data.drivers.length > 0) {
         setAvailableDrivers(res.data.drivers);
@@ -333,7 +425,7 @@ export default function CabBookingFlow() {
     } catch {
       // Keep seeded
     }
-  }, [pickup.lat, pickup.lng, selectedCategory]);
+  }, [pickup.lat, pickup.lng, selectedCabId]);
 
   useEffect(() => {
     if (step === 'VEHICLE_SELECT' || step === 'CONFIRM_RIDE') {
@@ -341,20 +433,23 @@ export default function CabBookingFlow() {
     }
   }, [step, loadDrivers]);
 
-  // Selected Category details
+  // Selected Category details (Single-selection source of truth)
   const currentCategory = useMemo(() => {
-    return categories.find((c) => c.id === selectedCategory) || categories[0];
-  }, [categories, selectedCategory]);
+    if (!selectedCabId) return null;
+    return categories.find((c) => c.id === selectedCabId || (c as any).category === selectedCabId) || null;
+  }, [categories, selectedCabId]);
 
   // ─── 5. Driver Matching Simulation (Screen 7) ────────────────────────────────
   const handleConfirmBooking = async () => {
+    if (!selectedCabId || !currentCategory) return;
     setStep('MATCHING_RADAR');
 
     // Realistic matching radar delay of 3.5s
     setTimeout(async () => {
       try {
+        const activeCat = selectedCabId || 'sedan';
         const res = await fetchAPI<{ drivers: MatchedDriver[] }>(
-          `/api/rides/available-drivers?lat=${pickup.lat}&lng=${pickup.lng}&category=${selectedCategory}`
+          `/api/rides/available-drivers?lat=${pickup.lat}&lng=${pickup.lng}&category=${activeCat}`
         );
 
         const candidates = res.data?.drivers || availableDrivers;
@@ -366,15 +461,16 @@ export default function CabBookingFlow() {
         const matched = candidates[0];
         setActiveDriver(matched);
 
-        // Create ride in backend
+        // Create ride in backend with ONLY the selected cab option
         const rideRes = await fetchAPI<{ ride: { _id: string; otp: string }; otp: string }>('/api/rides', {
           method: 'POST',
           body: {
             pickup,
             drop,
             stops,
-            category: selectedCategory,
-            fare: currentCategory ? currentCategory.total : 280,
+            category: selectedCabId,
+            vehicleType: currentCategory.name,
+            fare: currentCategory.total,
             fareBreakdown: currentCategory,
             distance: distanceKm,
             duration: durationMin,
@@ -404,7 +500,7 @@ export default function CabBookingFlow() {
           totalTrips: 1420,
           vehicleModel: 'Maruti Dzire (White)',
           vehicleNo: 'DL 01 AB 4829',
-          category: selectedCategory,
+          category: selectedCabId || 'sedan',
           lat: pickup.lat + 0.006,
           lng: pickup.lng + 0.004,
           eta: '3 mins',
@@ -710,58 +806,102 @@ export default function CabBookingFlow() {
                 </div>
               )}
 
-              {/* Route Input Stack */}
-              <div className="space-y-3 relative">
-                {/* Pickup Field */}
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" />
-                    Pickup Location
-                  </label>
+              {/* Dual Location Inputs Stack */}
+              <div className="space-y-2 relative">
+                {/* 1. Pickup Location Input */}
+                <AddressAutocomplete
+                  label="Pickup Location"
+                  dotColor="#10B981"
+                  value={pickupInput}
+                  onChange={(val) => {
+                    setPickupInput(val);
+                    setPickup((prev) => ({ ...prev, address: val }));
+                  }}
+                  onSelect={(place) => {
+                    const pt: LocationPoint = {
+                      address: place.address,
+                      lat: place.lat,
+                      lng: place.lng,
+                    };
+                    setPickup(pt);
+                    setPickupInput(place.address);
+                    if (drop) {
+                      calculateRoute(pt, drop, stops);
+                    }
+                  }}
+                  placeholder="Enter pickup location (e.g. Kanpur Central)..."
+                  showGpsButton={true}
+                />
+
+                {/* Swap Locations Button (↕) */}
+                <div className="flex items-center justify-center -my-1 relative z-10">
                   <button
-                    onClick={() => {
-                      setSearchTarget('pickup');
-                      setStep('SEARCH_OVERLAY');
-                    }}
-                    className="w-full p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.08] text-left flex items-center justify-between transition-colors group"
+                    type="button"
+                    onClick={handleSwapLocations}
+                    disabled={!drop}
+                    className="w-8 h-8 rounded-full bg-[#10243A] hover:bg-blue-600 border border-blue-500/30 hover:border-blue-400 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-md active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    title="Swap Pickup and Drop Locations"
+                    aria-label="Swap Locations"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span className="text-xs font-semibold text-white truncate">
-                        {pickup.address}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-500 group-hover:text-blue-400">
-                      Edit
-                    </span>
+                    <ArrowUpDown className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
+                {/* 2. Drop / Destination Location Input */}
+                <AddressAutocomplete
+                  label="Drop Location / Destination"
+                  dotColor="#F43F5E"
+                  value={dropInput}
+                  onChange={(val) => {
+                    setDropInput(val);
+                    setDrop((prev) => (prev ? { ...prev, address: val } : { address: val, lat: 28.5562, lng: 77.1000 }));
+                  }}
+                  onSelect={(place) => {
+                    const pt: LocationPoint = {
+                      address: place.address,
+                      lat: place.lat,
+                      lng: place.lng,
+                    };
+                    setDrop(pt);
+                    setDropInput(place.address);
+                    calculateRoute(pickup, pt, stops);
+                  }}
+                  placeholder="Where do you want to go? Enter destination (e.g. Lucknow Airport)..."
+                />
+
                 {/* Additional Stops (Max 2) */}
                 {stops.map((stop, idx) => (
-                  <div key={idx} className="relative animate-fadeIn">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 mb-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
-                      Stop {idx + 1}
-                    </label>
-                    <div className="flex items-center gap-2">
+                  <div key={idx} className="relative pt-2 animate-fadeIn">
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <AddressAutocomplete
+                          label={`Stop ${idx + 1}`}
+                          dotColor="#F59E0B"
+                          value={stop.address}
+                          onChange={(val) => {
+                            const updated = [...stops];
+                            updated[idx] = { ...updated[idx], address: val };
+                            setStops(updated);
+                          }}
+                          onSelect={(place) => {
+                            const updated = [...stops];
+                            updated[idx] = { address: place.address, lat: place.lat, lng: place.lng };
+                            setStops(updated);
+                            if (drop) {
+                              calculateRoute(pickup, drop, updated);
+                            }
+                          }}
+                          placeholder={`Enter address for Stop ${idx + 1}...`}
+                        />
+                      </div>
                       <button
+                        type="button"
                         onClick={() => {
-                          setSearchTarget(idx === 0 ? 'stop0' : 'stop1');
-                          setStep('SEARCH_OVERLAY');
+                          const updated = stops.filter((_, i) => i !== idx);
+                          setStops(updated);
+                          if (drop) calculateRoute(pickup, drop, updated);
                         }}
-                        className="flex-1 p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] border border-amber-500/30 text-left flex items-center justify-between transition-colors"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
-                          <span className="text-xs font-semibold text-white truncate">
-                            {stop.address}
-                          </span>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => setStops((prev) => prev.filter((_, i) => i !== idx))}
-                        className="w-10 h-10 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center text-red-400 transition-colors"
+                        className="w-10 h-10 mb-0.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 flex items-center justify-center text-red-400 transition-colors shrink-0 cursor-pointer"
                         aria-label="Remove stop"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -769,68 +909,113 @@ export default function CabBookingFlow() {
                     </div>
                   </div>
                 ))}
-
-                {/* Destination "Where to?" Field */}
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block" />
-                    Drop Location
-                  </label>
-                  <button
-                    onClick={() => {
-                      setSearchTarget('drop');
-                      setStep('SEARCH_OVERLAY');
-                    }}
-                    className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all group ${
-                      drop
-                        ? 'bg-white/[0.04] border-white/[0.08]'
-                        : 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/15'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <MapPin className="w-4 h-4 text-rose-400 shrink-0" />
-                      <span className={`text-xs font-bold truncate ${drop ? 'text-white' : 'text-blue-300'}`}>
-                        {drop ? drop.address : 'Where to? Search destination...'}
-                      </span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
-                  </button>
-                </div>
               </div>
 
               {/* Add Stop Button */}
               {stops.length < 2 && (
                 <button
+                  type="button"
                   onClick={() => {
                     const newStop: LocationPoint = {
                       address: 'New Delhi Railway Station, Delhi',
                       lat: 28.643,
                       lng: 77.2194,
                     };
-                    setStops((prev) => [...prev, newStop]);
+                    const updated = [...stops, newStop];
+                    setStops(updated);
+                    if (drop) calculateRoute(pickup, drop, updated);
                   }}
-                  className="flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 py-1"
+                  className="flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 py-0.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Stop (max 2)
+                  Add Intermediate Stop (max 2)
                 </button>
               )}
 
+              {/* Validation & Route Metrics Feedback Box */}
+              {isSameLocation ? (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5 text-amber-300 text-xs animate-fadeIn">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span>Pickup and destination cannot be the same. Please choose different locations.</span>
+                </div>
+              ) : isLocationValid ? (
+                <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-between animate-fadeIn">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Distance</span>
+                      <span className="text-sm font-extrabold text-white">{distanceKm} km</span>
+                    </div>
+                    <div className="w-px h-6 bg-white/10" />
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Est. Time</span>
+                      <span className="text-sm font-extrabold text-white">{durationMin} mins</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Fares From</span>
+                    <span className="text-sm font-black text-emerald-400">
+                      ₹{categories[0]?.total || Math.round(distanceKm * 14 + 70)}
+                    </span>
+                  </div>
+                </div>
+              ) : !dropInput.trim() ? (
+                <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-2 text-slate-400 text-xs">
+                  <Info className="w-4 h-4 shrink-0 text-blue-400" />
+                  <span>Enter your destination above to calculate route, travel time, and live fare.</span>
+                </div>
+              ) : null}
+
+              {/* Suggested Destinations Quick Chips */}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Quick Destination Suggestions:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Kanpur Central Railway Station',
+                    'Chaudhary Charan Singh International Airport, Lucknow',
+                    'Hazratganj Market, Lucknow',
+                    'Indira Gandhi International Airport Terminal 3, Delhi',
+                    'New Delhi Railway Station, Delhi',
+                    'DLF Cyber City, Gurugram',
+                  ].map((placeName) => (
+                    <button
+                      key={placeName}
+                      type="button"
+                      onClick={() => {
+                        const matched = POPULAR_SUGGESTIONS.find((s) =>
+                          s.address.toLowerCase().includes(placeName.toLowerCase().slice(0, 10))
+                        );
+                        const pt: LocationPoint = matched || {
+                          address: placeName,
+                          lat: 26.7606,
+                          lng: 80.8893,
+                        };
+                        setDrop(pt);
+                        setDropInput(pt.address);
+                        calculateRoute(pickup, pt, stops);
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-blue-600/20 border border-white/[0.08] hover:border-blue-500/40 text-[11px] font-semibold text-slate-300 hover:text-white transition-all cursor-pointer truncate max-w-full"
+                    >
+                      📍 {placeName.split(',')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Primary Action Button */}
               <button
+                type="button"
                 onClick={() => {
-                  if (drop) {
-                    calculateRoute(pickup, drop, stops);
-                    setStep('ROUTE_PREVIEW');
-                  } else {
-                    setSearchTarget('drop');
-                    setStep('SEARCH_OVERLAY');
+                  if (isLocationValid && drop) {
+                    fetchFareEstimate(distanceKm, durationMin);
+                    setStep('VEHICLE_SELECT');
                   }
                 }}
-                disabled={!drop}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-black transition-all shadow-xl shadow-blue-500/25 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={!isLocationValid}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-black transition-all shadow-xl shadow-blue-500/25 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
-                Continue to Route Preview
+                <span>Continue to Choose Vehicle</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -946,48 +1131,81 @@ export default function CabBookingFlow() {
                 </span>
               </div>
 
-              {/* Category Cards */}
-              <div className="space-y-2.5">
+              {/* Category Cards with Strict Single-Selection Radio Identity */}
+              <div className="space-y-2.5" role="radiogroup" aria-label="Available Cab Categories">
                 {categories.map((cat) => {
-                  const isSelected = selectedCategory === cat.id;
+                  const isSelected = Boolean(selectedCabId && (cat.id === selectedCabId || (cat as any).category === selectedCabId));
                   return (
                     <div
                       key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                      onClick={() => setSelectedCabId(cat.id)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
                         isSelected
-                          ? 'bg-blue-600/15 border-blue-500 text-white shadow-lg shadow-blue-500/10'
-                          : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] text-slate-300'
+                          ? 'bg-blue-600/20 border-blue-500 text-white shadow-lg shadow-blue-500/15 ring-1 ring-blue-500'
+                          : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.12] text-slate-300'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        {/* Single-Selection Radio Button */}
+                        <div className="relative flex items-center justify-center shrink-0">
+                          <input
+                            type="radio"
+                            id={`cab-radio-${cat.id}`}
+                            name="cab-selection"
+                            value={cat.id}
+                            checked={isSelected}
+                            onChange={() => setSelectedCabId(cat.id)}
+                            className="sr-only"
+                          />
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              isSelected
+                                ? 'border-blue-400 bg-blue-600 shadow-sm'
+                                : 'border-slate-500 bg-transparent group-hover:border-slate-400'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                          </div>
+                        </div>
+
+                        {/* Vehicle Icon Badge */}
                         <div
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 ${
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-all ${
                             isSelected
-                              ? 'bg-blue-600 text-white shadow-md'
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
                               : 'bg-white/5 border border-white/10 text-slate-300'
                           }`}
                         >
-                          {cat.id === 'go' && '🚗'}
-                          {cat.id === 'comfort' && '✨'}
-                          {cat.id === 'xl' && '🚙'}
+                          {cat.id === 'mini' && '🚗'}
+                          {cat.id === 'sedan' && '🚘'}
+                          {cat.id === 'xcar' && '✨'}
+                          {cat.id === 'suv' && '🚙'}
+                          {!['mini', 'sedan', 'xcar', 'suv'].includes(cat.id) && '🚗'}
                         </div>
-                        <div>
+
+                        {/* Category Details */}
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-white">{cat.name}</span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.08] text-slate-300">
+                            <span className="text-sm font-black text-white truncate">{cat.name}</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.08] text-slate-300 shrink-0">
                               {cat.seats} Seats
                             </span>
+                            {isSelected && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0">
+                                Selected
+                              </span>
+                            )}
                           </div>
-                          <p className="text-[11px] text-slate-400 mt-0.5">{cat.categoryName}</p>
+                          <p className="text-[11px] text-slate-400 truncate mt-0.5">{cat.categoryName}</p>
                           <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
                             <Clock className="w-3 h-3" /> ETA {cat.eta}
                           </span>
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0">
-                        <p className="text-base font-black text-white">₹{cat.total}</p>
+                      {/* Fare Price */}
+                      <div className="text-right shrink-0 ml-3">
+                        <p className={`text-base font-black ${isSelected ? 'text-white' : 'text-slate-200'}`}>₹{cat.total}</p>
                         <p className="text-[10px] text-slate-500 font-medium">{cat.fareRange}</p>
                       </div>
                     </div>
@@ -996,20 +1214,34 @@ export default function CabBookingFlow() {
               </div>
 
               {/* Itemized Fare Breakdown Trigger Button */}
-              <button
-                onClick={() => setShowFareBreakdownModal(true)}
-                className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Info className="w-3.5 h-3.5" />
-                View Itemized Fare Breakdown
-              </button>
+              {selectedCabId && currentCategory && (
+                <button
+                  onClick={() => setShowFareBreakdownModal(true)}
+                  className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                  View Itemized Fare Breakdown for {currentCategory.name}
+                </button>
+              )}
 
+              {/* Confirmation Button */}
               <button
-                onClick={() => setStep('CONFIRM_RIDE')}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-black transition-all shadow-xl shadow-blue-500/25 active:scale-95 flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (selectedCabId && currentCategory) {
+                    setStep('CONFIRM_RIDE');
+                  }
+                }}
+                disabled={!selectedCabId || !currentCategory}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-black transition-all shadow-xl shadow-blue-500/25 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
-                Confirm {currentCategory?.name || 'Ride'} — ₹{currentCategory?.total || 280}
-                <ArrowRight className="w-4 h-4" />
+                {selectedCabId && currentCategory ? (
+                  <>
+                    <span>Confirm {currentCategory.name} — ₹{currentCategory.total}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                ) : (
+                  <span>Please select a cab to continue</span>
+                )}
               </button>
             </div>
           )}
@@ -1028,10 +1260,10 @@ export default function CabBookingFlow() {
               <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
                   <div>
-                    <span className="text-xs font-extrabold text-white">{currentCategory?.name}</span>
+                    <span className="text-xs font-extrabold text-white">{currentCategory?.name || 'Selected Ride'}</span>
                     <p className="text-[11px] text-slate-400">{currentCategory?.vehicleModel}</p>
                   </div>
-                  <span className="text-lg font-black text-emerald-400">₹{currentCategory?.total}</span>
+                  <span className="text-lg font-black text-emerald-400">₹{currentCategory?.total || 280}</span>
                 </div>
 
                 <div className="text-xs space-y-2">
@@ -1060,7 +1292,7 @@ export default function CabBookingFlow() {
                     { id: 'upi', label: 'UPI / QR', icon: Zap },
                     { id: 'wallet', label: 'VITO Wallet', icon: Wallet },
                     { id: 'card', label: 'Credit Card', icon: CreditCard },
-                    { id: 'cash', label: 'Cash on Arrival', icon: BanknoteIcon },
+                    { id: 'cash', label: 'Cash on Arrival', icon: Banknote },
                   ].map((p) => {
                     const Icon = p.icon;
                     const isSelected = paymentMethod === p.id;
