@@ -1,8 +1,12 @@
 'use client';
 
-import React from 'react';
+import dynamic from 'next/dynamic';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import DriverHireFlow from '@/components/driver-hire/DriverHireFlow';
+
+const DriverHireFlow = dynamic(() => import('@/components/driver-hire/DriverHireFlow'), {
+  ssr: false,
+  loading: () => <div className="p-8 text-center text-slate-400">Loading Hire a Driver...</div>,
+});
 
 export default function DriverHirePage() {
   return (

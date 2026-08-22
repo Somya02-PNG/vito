@@ -12,6 +12,9 @@ import {
   verifyDriver,
   verifyRentalPartner,
   updateUserStatus,
+  getAdminVehicleDocuments,
+  verifyVehicleDocument,
+  verifyAdminVehicle,
 } from '../controllers/admin.controller';
 import { protect, authorize } from '../middleware/auth.middleware';
 
@@ -27,6 +30,9 @@ router.patch('/admin/drivers/:id/verify', protect, authorize('admin'), verifyDri
 router.get('/admin/partners', protect, authorize('admin'), getAdminPartners);
 router.patch('/admin/partners/:id/verify', protect, authorize('admin'), verifyRentalPartner);
 router.get('/admin/vehicles', protect, authorize('admin'), getAdminVehicles);
+router.patch('/admin/vehicles/:id/verify', protect, authorize('admin'), verifyAdminVehicle);
+router.get('/admin/vehicles/:vehicleId/documents', protect, authorize('admin'), getAdminVehicleDocuments);
+router.patch('/admin/documents/:docId/verify', protect, authorize('admin'), verifyVehicleDocument);
 router.get('/admin/operations', protect, authorize('admin'), getAdminOperations);
 router.get('/admin/payments', protect, authorize('admin'), getAdminPayments);
 router.get('/admin/safety', protect, authorize('admin'), getAdminSafety);

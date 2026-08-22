@@ -17,9 +17,11 @@ import adminRoutes from './routes/admin.routes';
 import paymentRoutes from './routes/payment.routes';
 import seedRoutes from './routes/seed.routes';
 import partnerRoutes from './routes/partner.routes';
+import partnerVehicleRoutes from './routes/partnerVehicle.routes';
 import rentalBookingRoutes from './routes/rentalBooking.routes';
 import customerVehicleRoutes from './routes/customerVehicle.routes';
 import customerDashboardRoutes from './routes/customerDashboard.routes';
+import aiRoutes from './routes/ai.routes';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 import { securityHeadersMiddleware, noSqlSanitizerMiddleware } from './middleware/security.middleware';
 
@@ -70,10 +72,13 @@ app.use('/api', adminRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', seedRoutes);
 app.use('/api', partnerRoutes);
+app.use('/api/partner', partnerVehicleRoutes);
 app.use('/api/rental', rentalBookingRoutes);
 app.use('/api/customer', customerVehicleRoutes);
 app.use('/api', customerVehicleRoutes);
 app.use('/api', customerDashboardRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api', aiRoutes);
 
 // Root Endpoint
 app.get('/', (req: Request, res: Response) => {

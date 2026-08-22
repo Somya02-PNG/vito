@@ -71,6 +71,40 @@ export const protect = async (
 };
 
 /**
+ * Optional Auth middleware - populates req.user if token is valid, but allows guest access
+ */
+export const optionalAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    let token = req.cookies?.vito_token;
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      userId: string;
+      role: string;
+    };
+
+    const user = await User.findById(decoded.userId);
+    if (user && user.status !== 'suspended' && user.status !== 'blocked') {
+      req.user = user;
+    }
+    next();
+  } catch {
+    // If token invalid, proceed as guest
+    next();
+  }
+};
+
+/**
  * ═══════════════════════════════════════════════════════════════════════════
  * 🛡️ AUTHORIZATION WALL: Role Based Access Control (RBAC)
  * ═══════════════════════════════════════════════════════════════════════════

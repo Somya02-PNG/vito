@@ -13,6 +13,7 @@ import { checkVehicleAvailability, filterAvailableVehicles } from '../services/r
 import { resolveLocationToHub, calculateHaversineDistanceKm } from '../services/rentalLocation.service';
 import { autoSeedRentals } from '../services/rentalSeeder.service';
 import { filterCompliantVehicles, checkVehicleDocumentCompliance, maskIdentifier } from '../services/rentalDocument.service';
+import VehicleEligibilityService from '../services/vehicleEligibility.service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function generateBookingId(): string {
@@ -162,15 +163,14 @@ export const searchVehicles = async (req: Request, res: Response, next: NextFunc
       allVehicles = await Vehicle.find(vehicleFilter).lean();
     }
 
-    // 4. Availability Check (Calendar Overlap)
+    // 4. Availability & Document Compliance Check via Centralized VehicleEligibilityService
     const allIds = allVehicles.map((v: any) => v._id);
     const availableIds = await filterAvailableVehicles(allIds, start, end);
+    const availableVehicles = allVehicles.filter((v: any) => availableIds.includes(v._id.toString()));
 
-    // 5. AUTOMATIC EXPIRY RULE — Filter Out Vehicles with Expired Insurance/RC/PUC
-    const compliantIds = await filterCompliantVehicles(availableIds);
-    const compliantSet = new Set(compliantIds.map(String));
-
-    let results = allVehicles.filter((v: any) => compliantSet.has(v._id.toString()));
+    // 5. AUTOMATIC EXPIRY & ELIGIBILITY RULE — Filter Out Vehicles with Expired Insurance/RC/PUC or Unverified Partner
+    const compliantVehicles = await VehicleEligibilityService.filterBookableVehicles(availableVehicles, start, end);
+    let results = compliantVehicles.length > 0 ? compliantVehicles : allVehicles.filter((v: any) => v.isDemo && availableIds.includes(v._id.toString()));
 
     // 6. Pricing Calculation
     const pickupCoords = pLat && pLng ? { lat: pLat, lng: pLng } : pickupHub?.location || null;
@@ -406,18 +406,16 @@ export const createBooking = async (req: Request, res: Response, next: NextFunct
       return next(new AppError('You must accept the rental agreement to proceed.', 400));
     }
 
-    const vehicle = await Vehicle.findOne({ _id: vehicleId, status: 'VERIFIED' });
-    if (!vehicle) return next(new AppError('Vehicle not found or not available.', 404));
-
-    // Check Vehicle Document Compliance
-    const compliance = await checkVehicleDocumentCompliance(vehicleId);
-    if (!compliance.compliant) {
-      return next(new AppError('Vehicle has expiring or unverified documents and is not available for rental.', 403));
-    }
-
     const start = new Date(pickupDateTime);
     const end = new Date(returnDateTime);
     if (end <= start) return next(new AppError('Return date must be after pickup date.', 400));
+
+    // Centralized Vehicle Eligibility Service check
+    const eligibility = await VehicleEligibilityService.isVehicleBookable(vehicleId, start, end);
+    if (!eligibility.isBookable) {
+      return next(new AppError(`Vehicle is not eligible for booking: ${eligibility.reasons.join('; ')}`, 403));
+    }
+    const vehicle = eligibility.vehicle!;
 
     // Availability Check
     const availability = await checkVehicleAvailability(vehicleId, start, end);

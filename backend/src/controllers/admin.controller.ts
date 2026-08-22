@@ -8,6 +8,8 @@ import Ride from '../models/Ride.model';
 import DriverHire from '../models/DriverHire.model';
 import Payment from '../models/Payment.model';
 import EmergencyContact from '../models/EmergencyContact.model';
+import VehicleDocument from '../models/VehicleDocument.model';
+import { logAuditEvent } from '../models/AuditLog.model';
 import { AppError } from '../middleware/error.middleware';
 
 // ─── 1. Get Admin Stats & Real MongoDB Aggregations ────────────────────────
@@ -811,3 +813,146 @@ export const getAdminSafety = async (
     next(error);
   }
 };
+
+// ─── 13. Get Vehicle Documents for Admin Verification ───────────────────────
+export const getAdminVehicleDocuments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { vehicleId } = req.params;
+    const documents = await VehicleDocument.find({ vehicleId }).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      data: { documents },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── 14. Verify / Reject Vehicle Document ───────────────────────────────────
+export const verifyVehicleDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { docId } = req.params;
+    const { status, rejectionReason } = req.body;
+
+    if (!status || !['VERIFIED', 'REJECTED', 'PENDING', 'EXPIRED'].includes(status)) {
+      return next(new AppError('Valid status ("VERIFIED", "REJECTED", "PENDING", "EXPIRED") is required.', 400));
+    }
+
+    if (status === 'REJECTED' && (!rejectionReason || !rejectionReason.trim())) {
+      return next(new AppError('A valid rejection reason is mandatory when rejecting a document.', 400));
+    }
+
+    const document = await VehicleDocument.findById(docId);
+    if (!document) {
+      return next(new AppError('Document not found.', 404));
+    }
+
+    document.verificationStatus = status as any;
+    document.verifiedAt = new Date();
+    document.verifiedBy = req.user?.name || 'Admin Officer';
+    if (status === 'REJECTED') {
+      document.rejectionReason = rejectionReason.trim();
+    } else {
+      document.rejectionReason = '';
+    }
+
+    await document.save();
+
+    await logAuditEvent({
+      actorId: req.user!._id,
+      actorRole: 'admin',
+      action: status === 'VERIFIED' ? 'DOCUMENT_APPROVED' : 'DOCUMENT_REJECTED',
+      entityType: 'VehicleDocument',
+      entityId: document._id.toString(),
+      metadata: { vehicleId: document.vehicleId, documentType: document.documentType, status, rejectionReason },
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Document ${document.documentType} verification status updated to ${status}.`,
+      data: { document },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── 15. Verify / Reject / Suspend Vehicle ───────────────────────────────────
+export const verifyAdminVehicle = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { status, rejectionReason } = req.body;
+
+    if (!status || !['VERIFIED', 'REJECTED', 'SUSPENDED', 'UNDER_REVIEW', 'DOCUMENTS_PENDING'].includes(status)) {
+      return next(new AppError('Valid vehicle verification status is required.', 400));
+    }
+
+    const vehicle = await Vehicle.findById(id);
+    if (!vehicle) {
+      return next(new AppError('Vehicle not found.', 404));
+    }
+
+    if (status === 'VERIFIED') {
+      // Check that all required documents are verified
+      const docs = await VehicleDocument.find({ vehicleId: vehicle._id });
+      const unverified = docs.filter((d) => d.verificationStatus !== 'VERIFIED');
+      if (unverified.length > 0) {
+        return next(
+          new AppError(
+            `Cannot verify vehicle. Unverified documents remain: ${unverified.map((d) => d.documentType).join(', ')}`,
+            400
+          )
+        );
+      }
+      vehicle.status = 'VERIFIED';
+      vehicle.availabilityStatus = 'AVAILABLE';
+      vehicle.rejectionReason = '';
+    } else if (status === 'REJECTED') {
+      vehicle.status = 'REJECTED';
+      vehicle.availabilityStatus = 'UNAVAILABLE';
+      vehicle.rejectionReason = rejectionReason || 'Vehicle documentation or specifications failed verification standards.';
+    } else if (status === 'SUSPENDED') {
+      vehicle.status = 'SUSPENDED';
+      vehicle.availabilityStatus = 'SUSPENDED';
+      vehicle.rejectionReason = rejectionReason || 'Vehicle suspended due to compliance violation.';
+    } else {
+      vehicle.status = status as any;
+    }
+
+    vehicle.verifiedAt = new Date();
+    vehicle.verifiedBy = req.user?.name || 'Admin Officer';
+    await vehicle.save();
+
+    await logAuditEvent({
+      actorId: req.user!._id,
+      actorRole: 'admin',
+      action: `VEHICLE_${status}`,
+      entityType: 'Vehicle',
+      entityId: vehicle._id.toString(),
+      metadata: { status, rejectionReason },
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Vehicle status updated to ${status}.`,
+      data: { vehicle },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

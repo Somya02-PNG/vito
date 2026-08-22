@@ -51,8 +51,10 @@ export default function PartnerRegisterPage() {
   const [hourlyRate, setHourlyRate] = useState('');
 
   // Rental Partner-specific
+  const [partnerSubType, setPartnerSubType] = useState<'INDIVIDUAL_OWNER' | 'RENTAL_AGENCY' | 'FLEET_OPERATOR'>('INDIVIDUAL_OWNER');
   const [businessName, setBusinessName] = useState('');
   const [fleetCount, setFleetCount] = useState('');
+  const [businessRegNo, setBusinessRegNo] = useState('');
 
   // UI state
   const [error, setError] = useState('');
@@ -119,6 +121,8 @@ export default function PartnerRegisterPage() {
       if (partnerType === 'rental_partner') {
         payload.businessName = businessName.trim();
         payload.fleetCount = Number(fleetCount) || 0;
+        payload.partnerSubType = partnerSubType;
+        payload.businessRegistrationNumber = businessRegNo.trim() || undefined;
       }
 
       await signup(payload);
@@ -345,21 +349,39 @@ export default function PartnerRegisterPage() {
             {!isDriver && (
               <>
                 <div>
-                  <label htmlFor="partner-reg-business" className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">Business / Owner Name</label>
+                  <label htmlFor="partner-reg-subtype" className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">Partner Operator Model *</label>
+                  <select
+                    id="partner-reg-subtype"
+                    value={partnerSubType}
+                    onChange={(e) => setPartnerSubType(e.target.value as any)}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700/80 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                  >
+                    <option value="INDIVIDUAL_OWNER">Individual Vehicle Owner (1-2 Cars)</option>
+                    <option value="RENTAL_AGENCY">Registered Self-Drive Rental Agency</option>
+                    <option value="FLEET_OPERATOR">Commercial Fleet Operator (5+ Cars)</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="partner-reg-business" className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">Business / Host Entity Name *</label>
                   <div className="relative">
                     <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input id="partner-reg-business" type="text" required value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. Sharma Rentals"
+                    <input id="partner-reg-business" type="text" required value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. Apex Luxury Rentals / John Doe"
                       className={`w-full pl-11 pr-4 py-3 rounded-xl bg-slate-900/80 border text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all ${fieldErrors.businessName ? 'border-red-500/60' : 'border-slate-700/80'}`}
                     />
                   </div>
                   {fieldErrors.businessName && <p className="mt-1 text-xs text-red-400">{fieldErrors.businessName}</p>}
                 </div>
-                <div>
-                  <label htmlFor="partner-reg-fleet" className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">Fleet Size (Vehicles you own)</label>
-                  <div className="relative">
-                    <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="partner-reg-fleet" className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">Fleet Size</label>
                     <input id="partner-reg-fleet" type="number" min="0" value={fleetCount} onChange={(e) => setFleetCount(e.target.value)} placeholder="e.g. 3"
-                      className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700/80 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700/80 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="partner-reg-regno" className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">GST / Reg No.</label>
+                    <input id="partner-reg-regno" type="text" value={businessRegNo} onChange={(e) => setBusinessRegNo(e.target.value)} placeholder="Optional"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700/80 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
                     />
                   </div>
                 </div>

@@ -65,7 +65,7 @@ export default function PartnerPendingPage() {
           }
         }, 800);
       } else {
-        setStatusMessage('Your driver application is still under review. We will notify you once approved.');
+        setStatusMessage(`Your ${isDriver ? 'driver' : 'rental partner'} application is currently under review by VITO verification team.`);
       }
     } catch {
       setStatusMessage('Unable to connect to verification server. Please check your internet connection.');

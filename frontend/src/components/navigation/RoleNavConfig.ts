@@ -269,14 +269,14 @@ export const ROLE_NAV_CONFIGS: Record<RoleType, RoleNavConfig> = {
   partner: {
     role: 'partner',
     title: 'Partner Operations',
-    badgeText: 'Partner',
+    badgeText: 'Rental Host',
     theme: ROLE_THEMES.partner,
     bottomNavItems: [
       { label: 'Overview', href: '/partner/dashboard', icon: LayoutDashboard },
+      { label: 'Vehicles', href: '/partner/fleet', icon: CarFront },
       { label: 'Bookings', href: '/partner/bookings', icon: CalendarDays },
-      { label: 'Fleet', href: '/partner/fleet', icon: CarFront },
+      { label: 'Handover', href: '/partner/handover', icon: Key },
       { label: 'Earnings', href: '/partner/earnings', icon: DollarSign },
-      { label: 'Settings', href: '/partner/settings', icon: SettingsIcon },
     ],
     groups: [
       {
@@ -286,30 +286,30 @@ export const ROLE_NAV_CONFIGS: Record<RoleType, RoleNavConfig> = {
         ],
       },
       {
-        id: 'operations',
-        title: 'Operations',
+        id: 'fleet_section',
+        title: 'Fleet & Inventory',
+        items: [
+          { label: 'All Vehicles', href: '/partner/fleet', icon: CarFront },
+          { label: 'Add Vehicle', href: '/partner/vehicles/new', icon: Key },
+          { label: 'Documents & Expiry', href: '/partner/documents', icon: FileCheck },
+        ],
+      },
+      {
+        id: 'operations_section',
+        title: 'Operations & Rentals',
         items: [
           { label: 'Bookings', href: '/partner/bookings', icon: CalendarDays },
-          { label: 'Calendar', href: '/partner/calendar', icon: CalendarRange },
-          { label: 'Customers', href: '/partner/customers', icon: Users },
+          { label: 'Handover & Returns', href: '/partner/handover', icon: Key },
+          { label: 'Damage & Disputes', href: '/partner/damage', icon: ShieldAlert },
         ],
       },
       {
-        id: 'fleet',
-        title: 'Fleet Management',
+        id: 'finance_section',
+        title: 'Finance & Growth',
         items: [
-          { label: 'Fleet Vehicles', href: '/partner/fleet', icon: CarFront },
-          { label: 'Maintenance', href: '/partner/maintenance', icon: Wrench },
-        ],
-      },
-      {
-        id: 'business',
-        title: 'Business & Reviews',
-        items: [
-          { label: 'Earnings', href: '/partner/earnings', icon: DollarSign },
-          { label: 'Reviews', href: '/partner/reviews', icon: Star },
-          { label: 'Messages', href: '/partner/messages', icon: MessageSquare },
-          { label: 'Settings', href: '/partner/settings', icon: SettingsIcon },
+          { label: 'Earnings & Payouts', href: '/partner/earnings', icon: DollarSign },
+          { label: 'Reviews & Ratings', href: '/partner/reviews', icon: Star },
+          { label: 'Settings & Profile', href: '/partner/settings', icon: SettingsIcon },
         ],
       },
     ],

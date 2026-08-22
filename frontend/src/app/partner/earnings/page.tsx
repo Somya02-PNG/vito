@@ -2,125 +2,187 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchAPI } from '@/lib/api';
-import { DollarSign, TrendingUp, Calendar, Wallet, ArrowUpRight } from 'lucide-react';
-import EmptyState from '@/components/ui/EmptyState';
-import ErrorState from '@/components/ui/ErrorState';
+import Link from 'next/link';
+import {
+  DollarSign,
+  TrendingUp,
+  Receipt,
+  Download,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  CarFront,
+  Sparkles,
+  RefreshCw,
+} from 'lucide-react';
 import { SkeletonStatGrid, SkeletonList } from '@/components/ui/SkeletonCard';
 
-interface EarningsData {
-  todayRevenue?: number;
-  weeklyRevenue?: number;
-  monthlyRevenue?: number;
-  totalBookings?: number;
-  pendingPayouts?: number;
-  recentTransactions?: { _id: string; amount: number; date: string; description: string }[];
+interface EarningsSummary {
+  grossVolume: number;
+  platformFee: number;
+  taxes: number;
+  netEarnings: number;
+  walletBalance: number;
 }
 
-type Period = 'today' | 'week' | 'month';
+interface PayoutRecord {
+  bookingId: string;
+  vehicleName: string;
+  registrationNumber: string;
+  completedAt: string;
+  grossAmount: number;
+  platformFee: number;
+  taxes: number;
+  netPayout: number;
+  status: string;
+}
 
 export default function PartnerEarningsPage() {
-  const [data, setData] = useState<EarningsData | null>(null);
+  const [summary, setSummary] = useState<EarningsSummary>({
+    grossVolume: 0,
+    platformFee: 0,
+    taxes: 0,
+    netEarnings: 0,
+    walletBalance: 0,
+  });
+  const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<Period>('week');
 
-  const fetchEarnings = async () => {
+  const fetchEarningsData = async () => {
     setLoading(true);
-    setError(null);
     try {
-      const res = await fetchAPI<{ earnings: EarningsData }>('/api/partner/earnings');
-      setData(res.data?.earnings || {});
-    } catch (err: any) {
-      setError(err?.message || 'Could not load earnings');
+      const res = await fetchAPI<{
+        summary: EarningsSummary;
+        payoutRecords: PayoutRecord[];
+      }>('/api/partner/earnings');
+
+      if (res.data) {
+        if (res.data.summary) setSummary(res.data.summary);
+        if (res.data.payoutRecords) setPayouts(res.data.payoutRecords);
+      }
+    } catch {
+      // Fallback
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchEarnings(); }, []);
-
-  const periodValue = period === 'today' ? (data?.todayRevenue ?? 0)
-    : period === 'week' ? (data?.weeklyRevenue ?? 0)
-    : (data?.monthlyRevenue ?? 0);
+  useEffect(() => {
+    fetchEarningsData();
+  }, []);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div>
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-1 h-7 rounded-full bg-gradient-to-b from-teal-500 to-teal-500/50" />
-          <h1 className="text-2xl font-black text-white tracking-tight">Earnings & Revenue</h1>
+    <div className="max-w-5xl mx-auto space-y-8 px-2 sm:px-4 py-4">
+      {/* ── HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Link href="/partner/dashboard" className="text-xs text-slate-400 hover:text-white transition-colors">
+              ← Dashboard
+            </Link>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            Earnings & Payout Ledger
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400">
+            Transparent revenue settlement with net payout breakdown (Gross − 15% Platform Fee − 5% GST).
+          </p>
         </div>
-        <p className="text-sm text-slate-400 pl-4">Fleet revenue, booking income, and payout history</p>
+
+        <button
+          onClick={fetchEarningsData}
+          className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs self-start"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
 
-      {loading ? <SkeletonStatGrid count={4} columns={4} /> : error ? (
-        <ErrorState message={error} onRetry={fetchEarnings} />
+      {/* ── FINANCIAL METRICS (4 CARDS) ── */}
+      {loading ? (
+        <SkeletonStatGrid count={4} columns={4} />
       ) : (
-        <>
-          {/* Hero Revenue Card */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-teal-900/30 via-slate-900 to-emerald-900/20 border border-teal-500/20 shadow-xl">
-            <div className="flex items-center gap-1 p-1 bg-black/30 rounded-xl w-fit mb-5">
-              {(['today', 'week', 'month'] as Period[]).map((p) => (
-                <button key={p} onClick={() => setPeriod(p)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${period === p ? 'bg-teal-500 text-white' : 'text-slate-400 hover:text-white'}`}>
-                  {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs font-bold text-teal-400 uppercase tracking-wider mb-1">Fleet Revenue</p>
-            <p className="text-4xl font-black text-white">{periodValue > 0 ? `₹${periodValue.toFixed(0)}` : '₹0'}</p>
-            {periodValue === 0 && <p className="text-xs text-slate-500 mt-1">No revenue recorded for this period yet</p>}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="p-5 rounded-2xl bg-[#0B101E] border border-white/10 space-y-1">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gross Booking Value</span>
+            <p className="text-2xl font-black text-white">₹{summary.grossVolume.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-slate-500">Customer Invoiced</p>
           </div>
 
-          {/* Stat Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Total Bookings', value: data?.totalBookings ?? 0, icon: Calendar },
-              { label: 'Monthly Revenue', value: data?.monthlyRevenue ? `₹${data.monthlyRevenue.toFixed(0)}` : '₹0', icon: TrendingUp },
-              { label: 'Pending Payouts', value: data?.pendingPayouts ? `₹${data.pendingPayouts.toFixed(0)}` : '₹0', icon: Wallet },
-              { label: 'Weekly Revenue', value: data?.weeklyRevenue ? `₹${data.weeklyRevenue.toFixed(0)}` : '₹0', icon: DollarSign },
-            ].map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.label} className="p-5 rounded-2xl bg-[#0B101E] border border-teal-500/15 space-y-3">
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-                    <Icon className="w-4 h-4 text-teal-400" />
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-white">{s.value}</p>
-                    <p className="text-[11px] text-slate-400">{s.label}</p>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="p-5 rounded-2xl bg-[#0B101E] border border-white/10 space-y-1">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Platform Operations Fee</span>
+            <p className="text-2xl font-black text-slate-300">₹{summary.platformFee.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-slate-500">15% Standard Fee</p>
           </div>
 
-          {/* Transactions */}
-          <div className="p-5 rounded-2xl bg-[#0B101E] border border-teal-500/20 space-y-4">
-            <h3 className="text-sm font-bold text-white">Recent Transactions</h3>
-            {!data?.recentTransactions || data.recentTransactions.length === 0 ? (
-              <EmptyState icon={DollarSign} title="No transactions yet" description="Booking revenue will appear here after customers complete their rentals." accentColor="#14B8A6" size="sm" />
-            ) : (
-              <div className="space-y-2">
-                {data.recentTransactions.map((tx) => (
-                  <div key={tx._id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-                        <ArrowUpRight className="w-4 h-4 text-teal-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-white">{tx.description}</p>
-                        <p className="text-[10px] text-slate-500">{new Date(tx.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
-                      </div>
-                    </div>
-                    <p className="text-sm font-black text-teal-300">+₹{tx.amount.toFixed(0)}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="p-5 rounded-2xl bg-[#0B101E] border border-white/10 space-y-1">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">GST & Statutory Taxes</span>
+            <p className="text-2xl font-black text-slate-300">₹{summary.taxes.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-slate-500">5% Govt Tax</p>
           </div>
-        </>
+
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-950/40 to-[#0B101E] border border-teal-500/30 space-y-1">
+            <span className="text-[10px] font-black text-teal-300 uppercase tracking-wider">Net Partner Payout</span>
+            <p className="text-2xl font-black text-teal-300">₹{summary.netEarnings.toLocaleString('en-IN')}</p>
+            <p className="text-[10px] text-teal-400/80">80% Net Share</p>
+          </div>
+        </div>
       )}
+
+      {/* ── PAYOUT HISTORY TABLE ── */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-white tracking-tight">Settlement Transactions</h2>
+          <p className="text-xs text-slate-400">Completed rental bookings and automated bank payouts</p>
+        </div>
+
+        {loading ? (
+          <SkeletonList count={4} />
+        ) : payouts.length === 0 ? (
+          <div className="p-10 rounded-2xl bg-[#0B101E] border border-white/10 text-center space-y-3">
+            <Receipt className="w-10 h-10 text-slate-600 mx-auto" />
+            <h3 className="text-sm font-bold text-white">No Payout Records Yet</h3>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Payout statements are automatically generated upon successful rental return and deposit settlement.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#0B101E]">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-[#070A12] text-[10px] uppercase font-bold text-slate-400 border-b border-white/10">
+                <tr>
+                  <th className="px-4 py-3">Booking ID</th>
+                  <th className="px-4 py-3">Vehicle</th>
+                  <th className="px-4 py-3">Gross Value</th>
+                  <th className="px-4 py-3">Platform Fee (15%)</th>
+                  <th className="px-4 py-3">Tax (5%)</th>
+                  <th className="px-4 py-3">Net Payout</th>
+                  <th className="px-4 py-3 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.05]">
+                {payouts.map((p, idx) => (
+                  <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-3 font-mono font-bold text-teal-400">{p.bookingId}</td>
+                    <td className="px-4 py-3 font-medium text-white">
+                      <span>{p.vehicleName}</span>
+                      <span className="block text-[10px] text-slate-500">{p.registrationNumber}</span>
+                    </td>
+                    <td className="px-4 py-3 font-bold text-white">₹{p.grossAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-3 text-slate-400">₹{p.platformFee.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-3 text-slate-400">₹{p.taxes.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-3 font-black text-emerald-400">₹{p.netPayout.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 uppercase">
+                        {p.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

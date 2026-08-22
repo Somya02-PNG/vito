@@ -1,7 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface FetchOptions extends Omit<RequestInit, 'body'> {
-  body?: Record<string, any>;
+  body?: Record<string, any> | string;
 }
 
 interface ApiResponse<T = any> {
@@ -34,7 +34,7 @@ export async function fetchAPI<T = any>(
       'Content-Type': 'application/json',
       ...headers,
     },
-    ...(body ? { body: JSON.stringify(body) } : {}),
+    ...(body ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {}),
     ...rest,
   });
 
